@@ -38,9 +38,10 @@ const helloWords = [
 
 const sadWords = [
     "sad",
-    "disappointing",
+    "disappoint",
     "dying",
-    "crying",
+    "die",
+    "cry",
     "unhappy",
     "depress",
     "upset",
