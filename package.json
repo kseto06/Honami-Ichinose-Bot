@@ -1,0 +1,19 @@
+{
+  "name": "discordbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Kaden",
+    "Seto"
+  ],
+  "author": "Kaden Seto, Honami Ichinose Club!",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.13.0",
+    "mathjs": "^11.11.1"
+  }
+}
