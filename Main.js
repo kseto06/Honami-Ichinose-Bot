@@ -4,13 +4,15 @@
 */
 
 //Init discord.js
-const { Client, GatewayIntentBits, MessageEmbed, Message } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMembers,
   ],
 });
 
@@ -24,6 +26,19 @@ const { goodbyeWords, helloWords, sadWords, encouragements } = require('./Arrays
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
+});
+
+client.on('guildMemberAdd', (member) => {  
+    const channel = member.guild.channels.cache.get('general');
+    console.log(channel);
+
+    const welcomeEmbed = new EmbedBuilder()
+        .setColor(FFB6C1)
+        .setTitle("Welcome, "+member.user.username+", to the Ichinose Fan Club!! You can learn more about me here: <3")
+        .setDescription('[Honami Ichinose - About Me!](https://you-zitsu.fandom.com/wiki/Honami_Ichinose)')
+        .setImage('https://i.redd.it/zmnr47j814m81.png');
+    //Send the embed as a message:
+    member.guild.channels.cache.find(ch => ch.name === 'general').send({ embeds: [welcomeEmbed] });
 });
 
 client.on("messageCreate", async message => {
@@ -114,26 +129,6 @@ client.on("messageCreate", async message => {
     }
 });
 
-client.on('guildMemberAdd', (member) => {
-    const guild = member.guild;
-    const channel = guild.channels.cache.find((ch) => ch.name === 'general');
 
-    /*
-    if (!channel) { 
-        return; 
-    }
-    */
-    
-    try {
-        channel.send("Welcome, "+member.user.username+", to the Ichinose Fan Club!! You can learn more about me here: ");
-        const embed = new MessageEmbed()
-            .setDescription('[Honami Ichinose - About Me!](https://you-zitsu.fandom.com/wiki/Honami_Ichinose)');
-        //Send the embed as a message:
-        message.channel.send({ embeds: [embed] });
-    } catch (error) {
-        console.error(error);
-        return;
-    }
-});
 
 client.login(config.token);
