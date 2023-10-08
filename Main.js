@@ -118,13 +118,22 @@ client.on('guildMemberAdd', (member) => {
     const guild = member.guild;
     const channel = guild.channels.cache.find((ch) => ch.name === 'general');
 
-    if (!channel) { return; }
+    /*
+    if (!channel) { 
+        return; 
+    }
+    */
     
-    channel.send("Welcome, "+member.user.username+", to the Ichinose Fan Club!! You can learn more about me here: ");
-    const embed = new MessageEmbed()
-        .setDescription('[Honami Ichinose - About Me!](https://you-zitsu.fandom.com/wiki/Honami_Ichinose)');
-    //Send the embed as a message:
-    message.channel.send({ embeds: [embed] });
+    try {
+        channel.send("Welcome, "+member.user.username+", to the Ichinose Fan Club!! You can learn more about me here: ");
+        const embed = new MessageEmbed()
+            .setDescription('[Honami Ichinose - About Me!](https://you-zitsu.fandom.com/wiki/Honami_Ichinose)');
+        //Send the embed as a message:
+        message.channel.send({ embeds: [embed] });
+    } catch (error) {
+        console.error(error);
+        return;
+    }
 });
 
 client.login(config.token);
