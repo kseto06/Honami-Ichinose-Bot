@@ -39,7 +39,7 @@ client.on('guildMemberAdd', (member) => {
 
     const welcomeEmbed = new EmbedBuilder()
         .setColor('#FFB6C1')
-        .setTitle("Welcome, "+member.user.username+", to the Ichinose Fan Club!! You can learn more about me here: <3")
+        .setTitle(`Welcome, ${member.user}, to the Ichinose Fan Club!! You can learn more about me here: <3`)
         .setDescription('[Honami Ichinose - About Me!](https://you-zitsu.fandom.com/wiki/Honami_Ichinose)')
         .setImage('https://i.redd.it/zmnr47j814m81.png');
     //Send the embed as a message:
