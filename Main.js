@@ -3,7 +3,9 @@
 * @author Kaden (Winterlicia) <>
 */
 
-//IDEA: Add a calendar function that allows the user to see the things that they need to do
+/*IDEAS:
+*  Add a calendar function that allows the user to see the things that they need to do -- COMPLETED
+*/
 
 //Init discord.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
@@ -60,7 +62,7 @@ client.on("messageCreate", async message => {
 
     //"Hello" function
     if (helloWords.some((word) => content.includes(word))) {
-        if (!/hi\b/.test(content)) {
+        if (content.includes('hi') && !/hi\b/.test(content)) {
             return;
         } else {
             await message.reply("Hi! Honami Ichinose here <3");
@@ -270,7 +272,5 @@ client.on("messageCreate", async message => {
         await message.reply("I'll make you the strongest deck there is >:D");
     }
 });
-
-
 
 client.login(config.token);
