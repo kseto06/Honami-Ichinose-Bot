@@ -62,19 +62,21 @@ async function addTask(task) {
     const taskFilePath = 'TaskList.txt';
 
     return new Promise((resolve, reject) => {
-        var isTaskAdded = null;
         try {
-           fs.appendFileSync(taskFilePath, task + '\n', 'utf-8');
-           console.log("File written successfully.");
-           isTaskAdded = true;
+            if (isFileEmpty(taskFilePath)) {
+                //If the file is empty, don't create a new line ('\n' will create exceptions for the first entry)
+                console.log('File empty, DO NOT create a new line.');
+                fs.appendFileSync(taskFilePath, task, 'utf-8');
+                console.log("File written successfully.");
+                resolve("Your task is added to the database~~");
+            } else {
+                console.log('File not empty, create a new line.');
+                fs.appendFileSync(taskFilePath, '\n' + task, 'utf-8');
+                console.log("File written successfully.");
+                resolve("Your task is added to the database~~");
+            }
         } catch (error) {
             console.error("An error occurred: "+error);
-            isTaskAdded = false;
-        }
-
-        if (isTaskAdded === true) {
-            resolve("Your task is added to the database~~");
-        } else {
             reject("Something went wrong! I couldn't add your task to the database :(")
         }
     });
@@ -94,9 +96,6 @@ async function viewTask() {
 
         try {
             lineReader.on('line', (line) => {
-                //var split = line.split(','); 
-                //split[0] = task, split[1] = subject, split[2] = due date
-                //var currentTask = new Task(split[0], split[1], split[2]);
                 currentTaskList.push(line);
             });            
         } catch (error) {
@@ -105,11 +104,10 @@ async function viewTask() {
 
         lineReader.on('close', () => {
             if (currentTaskList.length > 0) {
-                //Format the task list as a readable message:
-                //const taskListMessage = currentTaskList.join('\n');
+                //Return the "ArrayList", format table in Main.js
                 resolve(currentTaskList);
             } else {
-                reject("To-do list is empty~~")
+                reject("To-do list is empty~~");
             }
         });
 
@@ -120,8 +118,67 @@ async function viewTask() {
     });
 }
 
+async function resolveTask(taskToResolve) {
+    const taskFilePath = 'TaskList.txt';
+    var taskFound = false;
+
+    return new Promise((resolve, reject) => {
+        //Return the ArrayList and match the task that needs to be deleted:
+        viewTask()
+            .then((result) => {
+                for (let i = 0; i < result.length; i++) {
+                    var line = result[i];
+                    var split = line.split(',');
+                    var currentTask = new Task(split[0], split[1], split[2]);
+                    console.log("TEST: "+ (String(taskToResolve).toLowerCase() === currentTask.getTask().toLowerCase()));
+                    if (String(taskToResolve).toLowerCase() === currentTask.getTask().toLowerCase()) {
+                        taskFound = true;
+                        //Delete data using Arrays.splice(method)
+                        result.splice(i, 1);
+                        break;
+                    } 
+                }
+
+                //For some reason, taskToResolve (input value) is in lowercase -- therefore need to make the getTask() lowercase as well
+                if (taskFound === true) {
+                    //Erase data in text file to later append:
+                    fs.writeFileSync(taskFilePath, '');
+
+                    //Write back the new updated ArrayList in TaskList.txt:
+                    //Erase text file and replace it with updated tasks
+                    for (let j = 0; j < result.length; j++) {
+                        line = result[j];
+                        split = line.split(',');
+                        currentTask = new Task(split[0], split[1], split[2]);
+                        fs.appendFileSync(taskFilePath, String(currentTask) + '\n', 'utf-8');
+                        console.log("Task #"+j+" written successfully.");
+                        if (j === (result.length - 1)) { break; }
+                    }
+                    resolve("One less thing to do on the to-do list, good job on finishing your task <3");
+
+                } else {
+                    reject("I couldn't find the task in the database that you wanted to remove!");
+                }
+            })
+            .catch((error) => {
+                console.log("An error occurred: "+error);
+                reject("Your to-do list is empty~~");
+            })
+    });
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+//Boolean function
+function isFileEmpty(filePath) {
+    try {
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        return fileContent.trim() === ''; //return false
+    } catch (error) {
+        return true;
+    }
 }
 
 module.exports = {
@@ -129,5 +186,6 @@ module.exports = {
     randomizeArray,
     addTask,
     viewTask,
+    resolveTask,
     sleep,
 };

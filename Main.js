@@ -25,7 +25,7 @@ const fs = require('fs');
 const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
 
 //Init functions & arrays
-const { calculator, randomizeArray, addTask, viewTask, sleep } = require('./Functions');
+const { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep } = require('./Functions');
 const { goodbyeWords, helloWords, sadWords, encouragements } = require('./Arrays');
 const { Task } = require('./Task');
 
@@ -129,9 +129,10 @@ client.on("messageCreate", async message => {
     
     var enableCalendar = false;
     var needToAdd = false;
+    var needToResolve = false;
     if (content === "!calendar") {
-        await message.reply("Sure, would you like to view your current tasks, or do you already have another task to add???");
-        await message.channel.send("!cancel, !view, !add");
+        await message.reply("Sure, would you like to view your current tasks, do you already have another task to add, or have you finished a task?? :thinking:");
+        await message.channel.send("!cancel, !view, !add, !resolve");
         enableCalendar = true;
 
         const calendarListener = async (nestedMessage) => {
@@ -141,7 +142,7 @@ client.on("messageCreate", async message => {
 
             if (enableCalendar === true) {
                 await message.channel.send("Alrighty, give me a moment...");
-                sleep(3000);
+                sleep(4000);
 
                 if (nestedMessage === '!cancel') {
                     await message.channel.send("Ok then, cancelling~~");
@@ -177,7 +178,7 @@ client.on("messageCreate", async message => {
                             client.off('messageCreate', calendarListener);
                         })
                         .catch((error) => {
-                            message.channel.send("Hmmm, I can't seem to load your to-do list...")
+                            message.channel.send("Hmmm, I can't seem to load your to-do list... It might be empty!");
                             enableCalendar = false;
                             client.off('messageCreate', calendarListener);
                             console.error(error);
@@ -217,10 +218,46 @@ client.on("messageCreate", async message => {
                     client.on('messageCreate', newTask);
                     return;
 
+                } else if (nestedMessage === '!resolve') {
+                    await message.channel.send("Alright, enter the name of the task that you want to remove~~");
+                    sleep(1000);
+                    await message.channel.send("Only the TASK NAME, you hear me?! If you don't follow my instructions I'm not gonna help you >:(")
+                    sleep(1000);
+                    needToResolve = true;
+
+                    const removeTask = async (taskName) => {
+
+                        if (needToResolve === true) {
+                            resolveTask(taskName)
+                                .then((result) => {
+                                    message.channel.send(result);
+                                    needToResolve = false;
+                                    enableCalendar = false;
+                                    client.off('messageCreate', calendarListener);
+                                    client.off('messageCreate', removeTask);
+                                })
+                                .catch((error) => {
+                                    message.channel.send("Either your to-do list is empty, or I just couldn't find the task in the database that you wanted to remove!");
+                                    console.error(error);
+                                    needToResolve = false;
+                                    enableCalendar = false;
+                                    client.off('messageCreate', calendarListener);
+                                    client.off('messageCreate', removeTask);
+                                });
+                        }
+                    }
+                    //Register the nested removeTask listener:
+                    client.on('messageCreate', removeTask);
+                    return;
+
                 } else {
-                    await message.channel.send("Invalid input! I'm gonna cancel this operation~~");
-                    await console.log("Invalid input: "+nestedMessage.content);
-                    client.off('messageCreate', calendarListener);
+                    if (enableCalendar !== true) {
+                        return;
+                    } else {
+                        await message.channel.send("Invalid input! I'm gonna cancel this operation~~");
+                        await console.log("Invalid input: "+nestedMessage.content);
+                        client.off('messageCreate', calendarListener);
+                    }
                 }
             }
         }
