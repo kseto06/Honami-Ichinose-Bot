@@ -40,6 +40,7 @@ const sadWords = [
     "sad",
     "disappoint",
     "dying",
+    "kill",
     "die",
     "cry",
     "unhappy",
