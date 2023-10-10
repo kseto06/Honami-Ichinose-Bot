@@ -3,14 +3,13 @@
 * @author Kaden (Winterlicia) <>
 */
 
-
 const goodbyeWords = [
     "bye", 
     "goodbye", 
     "see you", 
     "see ya", 
     "goodnight", 
-    "gn", 
+    "good night", 
     "gtg", 
     "got to go", 
     "talk to you later", 
@@ -51,6 +50,9 @@ const sadWords = [
     "dismal",
     "feeling down",
     "feeling low",
+    "broke up",
+    "i hate myself",
+    "i hate every",
     "my dad left me",
 ];
 
