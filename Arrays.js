@@ -17,6 +17,7 @@ const goodbyeWords = [
     "see you soon",
     "sayonara",
     "zaijian",
+    "再見",
     "farewell",
 ];
 
@@ -33,6 +34,7 @@ const helloWords = [
     "ohayo",
     "ni hao",
     "你好",
+    "早上好",
 ];
 
 const sadWords = [
