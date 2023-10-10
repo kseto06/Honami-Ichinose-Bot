@@ -1,4 +1,4 @@
-class Task {
+export class Task {
     constructor(task, subject, dueDate = '') {
         this.task = task;
         this.subject = subject;
@@ -33,7 +33,3 @@ class Task {
         return `${this.task}, ${this.subject}, ${this.dueDate}`;
     }
 }
-
-module.exports = {
-    Task,
-};

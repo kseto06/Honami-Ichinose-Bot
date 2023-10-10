@@ -3,7 +3,7 @@
 * @author Kaden (Winterlicia) <>
 */
 
-const goodbyeWords = [
+export const goodbyeWords = [
     "bye", 
     "goodbye", 
     "see you", 
@@ -21,7 +21,7 @@ const goodbyeWords = [
     "farewell",
 ];
 
-const helloWords = [
+export const helloWords = [
     "hi",
     "hello",
     "hey",
@@ -37,11 +37,12 @@ const helloWords = [
     "早上好",
 ];
 
-const sadWords = [
+export const sadWords = [
     "sad",
     "disappoint",
     "dying",
     "kill",
+    "kms",
     "die",
     "cry",
     "unhappy",
@@ -58,7 +59,7 @@ const sadWords = [
     "my dad left me",
 ];
 
-const encouragements = [
+export const encouragements = [
     "It's gonna be okay. You got this!! I'll be cheering you on!!! <3",
     "Don't worry. Although you may be bothered by the past, always look on ahead for the great things that are gonna happen in the future <3",
     "心配しないで, 頑張ってください!!",
@@ -68,10 +69,3 @@ const encouragements = [
 const CR_characters = [
 
 ];
-
-module.exports = {
-    goodbyeWords,
-    helloWords,
-    sadWords,
-    encouragements,
-};

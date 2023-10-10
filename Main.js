@@ -5,10 +5,12 @@
 
 /*IDEAS:
 *  Add a calendar function that allows the user to see the things that they need to do -- COMPLETED
+*  Add Spotify API function to play music on Discord API
 */
 
-//Init discord.js
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+//Init discord.js, Table, fetch
+import fetch from 'node-fetch';
+import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,16 +22,16 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
   ],
 });
-const { Table } = require('embed-table'); //https://github.com/TreeFarmer/embed-table/tree/master
+import { Table } from 'embed-table'; //https://github.com/TreeFarmer/embed-table/tree/master
 
 //Init Token config
-const fs = require('fs');
+import fs from 'fs';
 const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
 
 //Init functions & arrays
-const { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep } = require('./Functions');
-const { goodbyeWords, helloWords, sadWords, encouragements } = require('./Arrays');
-const { Task } = require('./Task');
+import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep } from './Functions.js';
+import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
+import { Task } from './Task.js';
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);

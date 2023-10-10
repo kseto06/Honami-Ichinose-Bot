@@ -1,6 +1,7 @@
 {
   "name": "discordbot",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "Main.js",
   "scripts": {
@@ -15,6 +16,7 @@
   "dependencies": {
     "discord.js": "^14.13.0",
     "embed-table": "^4.2.3",
-    "mathjs": "^11.11.1"
+    "mathjs": "^11.11.1",
+    "node-fetch": "^3.3.2"
   }
 }

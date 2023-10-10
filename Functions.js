@@ -3,12 +3,13 @@
 * @author Kaden (Winterlicia) <>
 */
 
-const Math = require('mathjs');
-const fs = require('fs');
-const { Task } = require('./Task');
+import * as Math from 'mathjs';
+import fs from 'fs';
+import { Task } from './Task.js';
+import { createInterface } from 'readline';
 
 //FUNCTIONS:
-async function calculator(message) {
+export async function calculator(message) {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             var isCalculated = null;
@@ -29,7 +30,7 @@ async function calculator(message) {
     });
 }
 
-async function randomizeArray(array) {
+export async function randomizeArray(array) {
     return new Promise((resolve, reject) => {
         if (!Array.isArray(array) || array.length === 0) {
             reject("The input array is either not an array or empty.");
@@ -58,7 +59,7 @@ async function randomizeArray(array) {
 }
 
 //newTask = Task(task, subject, due date)
-async function addTask(task) {
+export async function addTask(task) {
     const taskFilePath = 'TaskList.txt';
 
     return new Promise((resolve, reject) => {
@@ -82,14 +83,14 @@ async function addTask(task) {
     });
 }
 
-async function viewTask() {
+export async function viewTask() {
     const taskFilePath = 'TaskList.txt';
     var currentTaskList = [];
 
     return new Promise((resolve, reject) => {
 
         const fileStream = fs.createReadStream(taskFilePath, 'utf-8');
-        const lineReader = require('readline').createInterface({
+        const lineReader = createInterface({
             input: fileStream,
             crlfDelay: Infinity,
         });
@@ -118,7 +119,7 @@ async function viewTask() {
     });
 }
 
-async function resolveTask(taskToResolve) {
+export async function resolveTask(taskToResolve) {
     const taskFilePath = 'TaskList.txt';
     var taskFound = false;
 
@@ -167,7 +168,7 @@ async function resolveTask(taskToResolve) {
     });
 }
 
-function sleep(ms) {
+export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -180,12 +181,3 @@ function isFileEmpty(filePath) {
         return true;
     }
 }
-
-module.exports = {
-    calculator,
-    randomizeArray,
-    addTask,
-    viewTask,
-    resolveTask,
-    sleep,
-};
