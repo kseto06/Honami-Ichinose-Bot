@@ -154,9 +154,9 @@ client.on("messageCreate", async message => {
                     await message.channel.send("Here is your current to-do list~~");
                                         
                     const table = new Table ({
-                        titles: ['Tasks', 'Subject', 'Due Date'],
-                        titleIndexes: [0, 61, 115],
-                        columnIndexes: [0, 30, 60],
+                        titles: ['**Tasks**', '**Subject**', '**Due Date**'],
+                        titleIndexes: [0, 65, 105],
+                        columnIndexes: [0, 30, 50],
                         start: '`',
                         end: '`',
                         padEnd: 3
