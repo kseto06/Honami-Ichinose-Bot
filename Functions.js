@@ -161,6 +161,35 @@ export async function resolveTask(taskToResolve) {
     });
 }
 
+export async function checkDueDate(DueDate) {
+    const currentTaskList = [];
+
+    return new Promise((resolve, reject) => {
+        viewTask()
+            .then((result) => {
+                for (let i = 0; i < result.length; i++) {
+                    var line = result[i];
+                    var split = line.split(',');
+                    var currentTask = new Task(split[0], split[1], split[2]);
+                    console.log("TEST: "+ (String(DueDate).toLowerCase() === currentTask.getDueDate().toLowerCase().replace(/\s+/g, '')));
+                    console.log("TEST: "+ String(DueDate).toLowerCase());
+                    console.log("TEST: "+ currentTask.getDueDate().toLowerCase().replace(/\s+/g, ''));
+                    if (String(DueDate).toLowerCase() === currentTask.getDueDate().toLowerCase().replace(/\s+/g, '')) {
+                        //If true, push the task(s) due tomorrow in an array:
+                        currentTaskList.push(String(currentTask));
+                    } 
+                }
+                //Once the for loop ends and all possible instances are checked, return the array of tasks to-do:
+                console.log("currentTaskList: "+currentTaskList);
+                resolve(currentTaskList);
+            })
+            .catch((error) => {
+                console.error(error);
+                reject("Nothing due tomorrow!");
+            });
+    });
+}
+
 export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
