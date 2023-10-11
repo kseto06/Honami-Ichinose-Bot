@@ -283,20 +283,17 @@ client.on("messageCreate", async message => {
             .then((result) => {
                 if (result !== null && result.length !== 0) {
                     let timeOfDay = '';
-                    switch (currentDate.getHours()) {
-                        case (currentDate.getHours() >= 0 && currentDate.getHours < 12):
-                            timeOfDay = 'morning';
-                            break;
-                        case (currentDate.getHours() >= 12 && currentDate.getHours < 19):
-                            timeOfDay = 'afternoon';
-                            break;
-                        case (currentDate.getHours() >= 19 && currentDate.getHours < 24):
-                            timeOfDay = 'evening';
-                            break;
-                        default:
-                            timeOfDay = 'day';
+                    if (currentDate.getHours() >= 0 && currentDate.getHours() < 12) {
+                        timeOfDay = 'morning';
+                    } else if (currentDate.getHours() >= 12 && currentDate.getHours() < 19) {
+                        timeOfDay = 'afternoon';
+                    } else if (currentDate.getHours() >= 19 && currentDate.getHours() < 24) {
+                        timeOfDay = 'evening';
+                    } else {
+                        timeOfDay = 'day';
                     }
                     message.channel.send("Good "+timeOfDay+"! You have task(s) that seem to be due tomorrow~~");
+                    
                     //Create another table of tasks due tomorrow:
                     for (let i = 0; i < result.length; i++) {
                         var line = result[i];
@@ -309,6 +306,8 @@ client.on("messageCreate", async message => {
                     const embed = new EmbedBuilder().setFields(table.toField());                            
                     message.channel.send({ embeds: [embed] });
                     message.channel.send("Good luck on finishing up your tasks for tomorrow <3");
+                } else {
+                    message.channel.send("You have nothing due tomorrow~~");
                 }
             })
             .catch((error) => {
