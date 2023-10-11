@@ -33,6 +33,7 @@ export const helloWords = [
     "bonjour",
     "ohayo",
     "ni hao",
+    "zao shang hao",
     "你好",
     "早上好",
 ];
