@@ -23,20 +23,31 @@ const client = new Client({
   ],
 });
 import { Table } from 'embed-table'; //https://github.com/TreeFarmer/embed-table/tree/master
+const table = new Table ({
+    titles: ['**Tasks**', '**Subject**', '**Due Date**'],
+    titleIndexes: [0, 65, 105],
+    columnIndexes: [0, 30, 50],
+    start: '`',
+    end: '`',
+    padEnd: 3
+});
 
 //Init Token config
 import fs from 'fs';
 const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
 
 //Init functions & arrays
-import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep } from './Functions.js';
+import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, checkDueDate } from './Functions.js';
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
+import { getTomorrowDate } from './Date.js';
+const currentDate = new Date();
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
+//WELCOME MESSAGE FUNCTIONALITY
 client.on('guildMemberAdd', (member) => {  
     const channel = member.guild.channels.cache.get('general');
     console.log(channel);
@@ -50,6 +61,8 @@ client.on('guildMemberAdd', (member) => {
     member.guild.channels.cache.find(ch => ch.name === 'general').send({ embeds: [welcomeEmbed] });
 });
 
+
+//MESSAGE FUNCTIONALITIES:
 client.on("messageCreate", async message => {
     if (message.author.bot) { return; }
 
@@ -155,14 +168,6 @@ client.on("messageCreate", async message => {
                 } else if (nestedMessage === '!view') {
                     await message.channel.send("Here is your current to-do list~~");
                                         
-                    const table = new Table ({
-                        titles: ['**Tasks**', '**Subject**', '**Due Date**'],
-                        titleIndexes: [0, 65, 105],
-                        columnIndexes: [0, 30, 50],
-                        start: '`',
-                        end: '`',
-                        padEnd: 3
-                    });
                     //Get the task values in the array from viewTask and format it in the table
                     viewTask()
                         .then((result) => {
@@ -267,6 +272,33 @@ client.on("messageCreate", async message => {
         }
         //Register the nested calendar listener:
         client.on('messageCreate', calendarListener);
+    }
+
+    //TIME FUNCTIONALITY: 
+    //At the beginning of the day, check due dates, and send a reminder to the user for tasks due the next day:
+    if (content === '!reminder') {
+        checkDueDate(getTomorrowDate())
+            //result returns true if the due date today exists.
+            .then((result) => {
+                if (result !== null && result.length !== 0) {
+                    message.channel.send("Good evening! You have task(s) that seem to be due tomorrow~~");
+                    //Create another table of tasks due tomorrow:
+                    for (let i = 0; i < result.length; i++) {
+                        var line = result[i];
+                        var split = line.split(',');
+                        var task_ToDo = new Task(split[0], split[1], split[2]);
+                        table.addRow([task_ToDo.getTask(), task_ToDo.getSubject(), task_ToDo.getDueDate()]);
+                    }
+
+                    //Once all values have been added to the table, use embedBuilder to send the table
+                    const embed = new EmbedBuilder().setFields(table.toField());                            
+                    message.channel.send({ embeds: [embed] });
+                    message.channel.send("Good luck on finishing up your tasks for tomorrow <3");
+                }
+            })
+            .catch((error) => {
+                console.error(error);
+            });
     }
 
     //Build Clash Royale Deck
