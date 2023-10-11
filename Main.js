@@ -41,6 +41,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, chec
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
+import { time } from 'console';
 const currentDate = new Date();
 
 client.on('ready', () => {
@@ -281,7 +282,21 @@ client.on("messageCreate", async message => {
             //result returns true if the due date today exists.
             .then((result) => {
                 if (result !== null && result.length !== 0) {
-                    message.channel.send("Good evening! You have task(s) that seem to be due tomorrow~~");
+                    let timeOfDay = '';
+                    switch (currentDate.getHours()) {
+                        case (currentDate.getHours() >= 0 && currentDate.getHours < 12):
+                            timeOfDay = 'morning';
+                            break;
+                        case (currentDate.getHours() >= 12 && currentDate.getHours < 19):
+                            timeOfDay = 'afternoon';
+                            break;
+                        case (currentDate.getHours() >= 19 && currentDate.getHours < 24):
+                            timeOfDay = 'evening';
+                            break;
+                        default:
+                            timeOfDay = 'day';
+                    }
+                    message.channel.send("Good "+timeOfDay+"! You have task(s) that seem to be due tomorrow~~");
                     //Create another table of tasks due tomorrow:
                     for (let i = 0; i < result.length; i++) {
                         var line = result[i];
