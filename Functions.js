@@ -12,19 +12,12 @@ import { createInterface } from 'readline';
 export async function calculator(message) {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
-            var isCalculated = null;
             try {
                var calculation = Math.evaluate(String(message));
-               isCalculated = true;
+               resolve("Here's your answer! I got: "+calculation);
             } catch {
                 console.log("Invalid Expression");
-                isCalculated = false;
-            }
-
-            if (isCalculated === true) {
-                resolve("Here's your answer! I got: "+calculation);
-            } else {
-                reject("Hmmm... I couldn't do it! Quite the challenge you got there... :(")
+                reject("Hmmm... I couldn't do it! Quite the challenge you got there... :(");
             }
         }, 3000); //She needs to think. She's human.
     });
