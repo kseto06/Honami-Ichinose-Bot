@@ -144,7 +144,11 @@ export async function resolveTask(taskToResolve) {
                         line = result[j];
                         split = line.split(',');
                         currentTask = new Task(split[0], split[1], split[2]);
-                        fs.appendFileSync(taskFilePath, String(currentTask) + '\n', 'utf-8');
+                        if (j === result.length - 1) {
+                            fs.appendFileSync(taskFilePath, String(currentTask), 'utf-8');
+                        } else {
+                            fs.appendFileSync(taskFilePath, String(currentTask) + '\n', 'utf-8');
+                        }
                         console.log("Task #"+j+" written successfully.");
                         if (j === (result.length - 1)) { break; }
                     }
