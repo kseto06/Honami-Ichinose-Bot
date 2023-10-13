@@ -164,7 +164,7 @@ client.on("messageCreate", async message => {
 
                 if (nestedMessage === '!cancel') {
                     await message.channel.send("Ok then, cancelling~~");
-                    client.off('messageCreate', calculatorListener);
+                    client.off('messageCreate', calendarListener);
 
                 } else if (nestedMessage === '!view') {
                     await message.channel.send("Here is your current to-do list~~");
