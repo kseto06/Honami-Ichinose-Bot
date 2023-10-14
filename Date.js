@@ -1,3 +1,8 @@
+/*
+* HONAMI ICHINOSE DISCORD BOT - From the Classroom of the Elite
+* @author Kaden (Winterlicia) <>
+*/
+
 const currentDate = new Date();
 
 export function getTomorrowDate() {

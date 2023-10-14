@@ -1,3 +1,8 @@
+/*
+* HONAMI ICHINOSE DISCORD BOT - From the Classroom of the Elite
+* @author Kaden (Winterlicia) <>
+*/
+
 export class Task {
     constructor(task, subject, dueDate = '') {
         this.task = task;

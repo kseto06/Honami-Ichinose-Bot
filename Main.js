@@ -8,8 +8,7 @@
 *  Add Spotify API function to play music on Discord API
 */
 
-//Init discord.js, Table, fetch
-import fetch from 'node-fetch';
+//Init discord.js, Table, fetch, SpotifyAPI
 import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
 const client = new Client({
   intents: [
@@ -22,6 +21,21 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
   ],
 });
+import SpotifyWebApi from 'spotify-web-api-node';
+
+//Init config for Token, Spotify Client ID, Spotify Client Secret
+import fs from 'fs';
+const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
+
+const clientId = config.spotify_clientid; // Replace with your Spotify client ID
+const clientSecret = config.spotify_clientsecret; // Replace with your Spotify client secret
+
+//Define spotifyApi with client's ID and Secret
+const spotifyApi = new SpotifyWebApi({
+  clientId: clientId,
+  clientSecret: clientSecret,
+});
+
 import { Table } from 'embed-table'; //https://github.com/TreeFarmer/embed-table/tree/master
 const table = new Table ({
     titles: ['**Tasks**', '**Subject**', '**Due Date**'],
@@ -32,17 +46,14 @@ const table = new Table ({
     padEnd: 3
 });
 
-//Init Token config
-import fs from 'fs';
-const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
-
 //Init functions & arrays
 import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, checkDueDate } from './Functions.js';
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { time } from 'console';
+import { authorizeSpotify, playSong } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
+var newAccessToken = null;
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -115,7 +126,6 @@ client.on("messageCreate", async message => {
         
         //Nested messageCreate for calculation:
         const calculatorListener = async (nestedMessage) => {
-            if (nestedMessage.author.bot) return;
 
             nestedMessage = nestedMessage.content.toLowerCase();
             
@@ -313,6 +323,79 @@ client.on("messageCreate", async message => {
             .catch((error) => {
                 console.error(error);
             });
+    }
+
+    if (content === '!authorize') {
+        await message.reply("Sure!! For me to connect to Spotify and play music, I'm going to need you to make sure your Spotify app/web is opened up, with you logged in~~");
+        await message.reply("Authorize here: http://localhost:3000/authorize");
+        //Authorize Spotify with function defined in PKCE Authorization
+        await authorizeSpotify()
+            .then((accessToken) => {
+                newAccessToken = accessToken;
+                console.log(newAccessToken);
+                message.channel.send("Successfully authorized!!");
+            })
+            .catch((error) => {
+                console.log("Authorization failed: "+error);
+            });
+    }
+
+    var enableMusic = false;
+    if (content === '!music') {
+        await message.channel.send("Make you authorize Spotify first or else these functions won't run!! Authorize using the command: !authorize");
+        sleep(3000);
+        await message.channel.send("Please enter a function: !play, !cancel");
+        enableMusic = true;
+        
+        const musicListener = async (nestedMessage) => {
+            if (nestedMessage.author.bot) { return; }
+
+            nestedMessage = String(nestedMessage).toLowerCase().trim();
+
+            console.log('Nested message: '+nestedMessage);
+            
+            if (enableMusic === true) {
+
+                if (nestedMessage === '!cancel') {
+                    await message.channel.send("Ok then, cancelling~~");
+                    client.off('messageCreate', musicListener);
+
+                } else if (nestedMessage === '!play') {
+                    await message.channel.send("Alrighty, enter the name of the song and the name of the artist that you want to play!");
+                    await message.channel.send("In the format of: 'Song Name', 'Artist Name'");
+
+                    const playMusicListener = async (input) => {
+                        console.log("Attempt to log access token from global declare: "+newAccessToken);
+                        try {
+                            input = String(input).split(','); //input[0] = songName, input[1] = artistName
+                            let SongName = input[0].trim();
+                            let ArtistName = input[1].trim().toLowerCase();
+                            try {
+                                playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken);
+                            } catch (error) {
+                                console.error("Error with play the song: "+error);
+                                await message.channel.send("Your song wasn't found~~ Check if your song really exists!");
+                            }
+                            client.off('messageCreate', playMusicListener);
+                            client.off('messageCreate', musicListener);
+
+                        } catch (error) {
+                            message.channel.send("There was an error in trying to find and play your song :(");
+                            client.off('messageCreate', playMusicListener);
+                            client.off('messageCreate', musicListener);
+                            console.error('Error:', error);
+                            throw error;
+                        }
+                    }
+                    //Register playMusicListener
+                    client.on('messageCreate', playMusicListener);
+                } else {
+                    console.log("Functionality doesn't exist");
+                }                          
+            }
+        }
+        //Register musicListener
+        client.on('messageCreate', musicListener);
     }
 
     //Build Clash Royale Deck
