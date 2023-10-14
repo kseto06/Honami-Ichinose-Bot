@@ -187,7 +187,7 @@ client.on("messageCreate", async message => {
                                 var line = result[i];
                                 var split = line.split(',');
                                 var currentTask = new Task(split[0], split[1], split[2]);
-                                table.addRow([currentTask.getTask(), currentTask.getSubject(), currentTask.getDueDate()]);
+                                table.addRow([currentTask.getTask(), currentTask.getSubject().trim(), currentTask.getDueDate().trim()]);
                             }
 
                             //Once all values have been added to the table, use embedBuilder to send the table
@@ -309,7 +309,7 @@ client.on("messageCreate", async message => {
                         var line = result[i];
                         var split = line.split(',');
                         var task_ToDo = new Task(split[0], split[1], split[2]);
-                        table.addRow([task_ToDo.getTask(), task_ToDo.getSubject(), task_ToDo.getDueDate()]);
+                        table.addRow([task_ToDo.getTask(), task_ToDo.getSubject().trim(), task_ToDo.getDueDate().trim()]);
                     }
 
                     //Once all values have been added to the table, use embedBuilder to send the table
