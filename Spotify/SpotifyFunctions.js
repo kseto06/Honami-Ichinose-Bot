@@ -152,12 +152,62 @@ export async function playSong(songName, artistName, accessToken) {
               throw new Error("Device not found");
           }
       } else {
+          return("Could not get searchResults :(");
           throw new Error("Could not get searchResults");
       }
   } catch (error) {
       console.error('Error:', error);
       throw error; // Propagate the error to the calling function
   }
+}
+
+export async function continuePlaying(ArtistID, accessToken) {
+  try {
+      const playbackState = await spotifyApi.getMyCurrentPlaybackState();
+
+      if (!playbackState.body.is_playing) {
+        const currentArtistTracks = await spotifyApi.getArtistTopTracks(ArtistID, 'US');
+
+        if (artistTopTracks.body.tracks.length > 0) {
+          // Select a track from the top tracks
+          const nextTrack = artistTopTracks.body.tracks[0];
+    
+          // Play the next track
+          await spotifyApi.play({ uris: [nextTrack.uri] });
+          return "Next song is now playing~~";        
+        }
+      }
+  } catch (error) {
+    console.log("Error in playing other artist tracks: "+error);
+  }
+}
+
+export async function getArtistID(ArtistName, AccessToken) {
+  //Get the Artist's ID
+  const headers = {
+      'Authorization': `Bearer ${AccessToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+  }
+  const params = new URLSearchParams();
+  params.append('q', ArtistName);
+  params.append('type', 'artist');
+
+  return fetch('https://api.spotify.com/v1/search?' + params.toString(), { headers })
+    .then(response => response.json())
+    .then(data => {
+      if (data.artists && data.artists.items && data.artists.items.length > 0) {
+        const ArtistID = data.artists.items[0].id; //Get the first artist (most relevant match)
+        console.log("Artist ID: "+ ArtistID);
+        return ArtistID;
+      } else {
+        console.error("Couldn't get artist ID: No artist data found");
+        return null; // Return a null value to indicate failure
+      }
+    })
+    .catch((error) => {
+      console.error("Couldn't get artist ID: "+error);
+      return null;
+    });
 }
 
 //TEST: --IT WORKS 
@@ -171,5 +221,15 @@ authorizeSpotify()
   });
 */
 
+//TEST: getArtistID: 
 
+/*
+authorizeSpotify()
+  .then((accessToken) => {
+    getArtistID('JJ Lin', accessToken)
+      .then((artistID) => {
+        console.log(`JJ Lin's Artist ID: ${artistID}`);
+      })
+  });
+*/
 
