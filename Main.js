@@ -21,7 +21,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
   ],
 });
-import SpotifyWebApi from 'spotify-web-api-node';
+import SpotifyWebApi from 'spotify-web-api-node'; //Documentation: https://www.npmjs.com/package/spotify-web-api-node
 
 //Init config for Token, Spotify Client ID, Spotify Client Secret
 import fs from 'fs';
@@ -36,7 +36,7 @@ const spotifyApi = new SpotifyWebApi({
   clientSecret: clientSecret,
 });
 
-import { Table } from 'embed-table'; //https://github.com/TreeFarmer/embed-table/tree/master
+import { Table } from 'embed-table'; //Documentation: https://github.com/TreeFarmer/embed-table/tree/master
 const table = new Table ({
     titles: ['**Tasks**', '**Subject**', '**Due Date**'],
     titleIndexes: [0, 65, 105],
@@ -372,8 +372,12 @@ client.on("messageCreate", async message => {
                             let ArtistName = input[1].trim().toLowerCase();
                             try {
                                 playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken);
+
+                                //Send current song playing:
+                                message.channel.send('\n' + (`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**`));
+
                             } catch (error) {
-                                console.error("Error with play the song: "+error);
+                                console.error("Error with playing the song: "+error);
                                 await message.channel.send("Your song wasn't found~~ Check if your song really exists!");
                             }
                             client.off('messageCreate', playMusicListener);
@@ -381,6 +385,16 @@ client.on("messageCreate", async message => {
 
                         } catch (error) {
                             message.channel.send("There was an error in trying to find and play your song :(");
+
+                            const periodIndex = error.message.indexOf('.');
+                            // If a period is found, extract the first sentence. Otherwise, log the entire error message.
+                            if (periodIndex !== -1) {
+                                message.channel.send('An error occurred: '+ error.message.substring(0, periodIndex + 2));
+                                message.channel.send("Please refresh the Honami Ichinose Bot to be able to use it again.");
+                            } else {
+                                message.channel.send('An error occurred:'+ error.message);
+                            }
+
                             client.off('messageCreate', playMusicListener);
                             client.off('messageCreate', musicListener);
                             console.error('Error:', error);
@@ -396,6 +410,28 @@ client.on("messageCreate", async message => {
         }
         //Register musicListener
         client.on('messageCreate', musicListener);
+    }
+
+    //Pause and resume SpotifyAPI Commands
+    spotifyApi.setAccessToken(newAccessToken);
+    if (content === '!pause') {
+        spotifyApi.pause()
+            .then(() => {
+                message.channel.send("Your song has paused!");
+            })
+            .catch((error) => {
+                //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
+                console.log('Something went wrong!', error);
+            });
+    } else if (content === '!resume') {
+        spotifyApi.play()
+            .then(() => {
+                message.channel.send("Your song is resuming~~");
+            })
+            .catch((error) => {
+                //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
+                console.log('Something went wrong!', error);
+            });
     }
 
     //Build Clash Royale Deck
