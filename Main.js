@@ -51,7 +51,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, chec
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 
@@ -66,7 +66,7 @@ client.on('guildMemberAdd', (member) => {
 
     const welcomeEmbed = new EmbedBuilder()
         .setColor('#FFB6C1')
-        .setTitle(`Welcome, ${member.user}, to the Ichinose Fan Club!! You can learn more about me here: <3`)
+        .setTitle(`Welcome, <@${member.id}>, to the Ichinose Fan Club!! You can learn more about me here: <3`)
         .setDescription('[Honami Ichinose - About Me!](https://you-zitsu.fandom.com/wiki/Honami_Ichinose)')
         .setImage('https://i.redd.it/zmnr47j814m81.png');
     //Send the embed as a message:
@@ -371,10 +371,27 @@ client.on("messageCreate", async message => {
                             let SongName = input[0].trim();
                             let ArtistName = input[1].trim().toLowerCase();
                             try {
-                                playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken);
+                                playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken)
+                                    .then((success) => {
+                                        //Send current song playing (only when it is actually playing):
+                                        if (success) {
+                                            message.channel.send('\n' + (`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**`));
+                                            return;
+                                        } else {
+                                            message.channel.send("Couldn't find the song you wanted to play! :(");
+                                            return;
+                                        }
+                                    });                           
 
-                                //Send current song playing:
-                                message.channel.send('\n' + (`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**`));
+                                //When the song is over, play the next song in the artist's top tracks:
+                                await returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
+                                    .then(() => {
+                                        message.channel.send("Some more tracks by the same artist have been added to the queue~~");
+                                    })
+                                    .catch((error) => {
+                                        console.error("An error occurred: "+error);
+                                        message.channel.send("Couldn't get your next tracks! :(");
+                                   });
 
                             } catch (error) {
                                 console.error("Error with playing the song: "+error);
@@ -431,6 +448,22 @@ client.on("messageCreate", async message => {
             .catch((error) => {
                 //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
                 console.log('Something went wrong!', error);
+            });
+    } else if (content === '!skip to next') {
+        spotifyApi.skipToNext()
+            .then(() => {
+                message.channel.send("Alright, skipping to the next song in queue~~");
+            })
+            .catch((error) => {
+                console.error("Error in skipping to the next song: "+error);
+            });
+    } else if (content === '!skip to previous') {
+        spotifyApi.skipToPrevious()
+            .then(() => {
+                message.channel.send("Alright, playing back your previous song...");
+            })
+            .catch((error) => {
+                console.error("Error in skipping back to the previous song: "+error);
             });
     }
 
