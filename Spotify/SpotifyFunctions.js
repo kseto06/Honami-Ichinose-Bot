@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import SpotifyWebApi from 'spotify-web-api-node';
 
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
 
 //Init config.json for id and secret
 import fs from 'fs';
@@ -17,7 +17,7 @@ const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
 
 const clientId = config.spotify_clientid; // Replace with your Spotify client ID
 const clientSecret = config.spotify_clientsecret; // Replace with your Spotify client secret
-const redirectUri = 'http://localhost:3000/callback'; // Replace with your redirect URI
+const redirectUri = 'http://127.0.0.1:8080/callback'; // Replace with your redirect URI
 
 //Define spotifyApi with client's ID and Secret
 const spotifyApi = new SpotifyWebApi({
@@ -117,7 +117,7 @@ res.send('Welcome to the PKCE Authorization Server');
 
 
 app.listen(PORT, () => {
-console.log('Authorize here: http://localhost:3000/authorize');
+console.log('Authorize here: http://127.0.0.1:8080/authorize');
 console.log(`Server is running on port ${PORT}`);
 });
 

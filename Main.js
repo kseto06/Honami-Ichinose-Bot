@@ -327,7 +327,7 @@ client.on("messageCreate", async message => {
 
     if (content === '!authorize') {
         await message.reply("Sure!! For me to connect to Spotify and play music, I'm going to need you to make sure your Spotify app/web is opened up, with you logged in~~");
-        await message.reply("Authorize here: http://localhost:3000/authorize");
+        await message.reply("Authorize here: http://127.0.0.1:8080/authorize");
         //Authorize Spotify with function defined in PKCE Authorization
         await authorizeSpotify()
             .then((accessToken) => {
