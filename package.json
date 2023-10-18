@@ -5,7 +5,8 @@
   "description": "",
   "main": "Main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "concurrently \"ngrok http 8080\" \"node Main.js\""
   },
   "keywords": [
     "Kaden",
@@ -15,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@discordjs/opus": "^0.9.0",
+    "@ngrok/ngrok": "^0.9.0",
     "@spotify/web-api-ts-sdk": "^1.1.2",
     "discord.js": "^14.13.0",
     "embed-table": "^4.2.3",
@@ -25,5 +27,9 @@
     "node-fetch": "^3.3.2",
     "spotify-web-api-node": "^5.0.2",
     "ytdl-core": "^4.11.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1",
+    "npm-run-all": "^4.1.5"
   }
 }

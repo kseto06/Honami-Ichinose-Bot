@@ -28,6 +28,9 @@ const spotifyApi = new SpotifyWebApi({
 // In-memory storage for code_verifiers 
 const codeVerifiers = new Map();
 
+// Global variables:
+var currentSongCount = 0;
+
 // Helper function to generate a random string
 function generateRandomString(length) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -164,7 +167,17 @@ export async function playSong(songName, artistName, accessToken) {
 export async function returnNextTracks(ArtistName, AccessToken) {
   //console.log(AccessToken);
   spotifyApi.setAccessToken(AccessToken);
-  //Clear the queue (if possible): -- seems like not possible rn  
+  //Clear the queue (if possible): -- use skip function? Reset global variable to 0?
+  clearQueue(currentSongCount, AccessToken)
+    .then(() => {
+      //Reset current song count to count the next queue:
+      currentSongCount = 0;
+    })
+    .catch((error) => {
+      console.error("Error in clearing the queue (returnNextTracks): "+error);
+    });
+
+    //Search for other tracks by the same artist:
     spotifyApi.searchTracks(`artist:${ArtistName}`)
       .then((data) => {
         console.log(`Search tracks by "${ArtistName}" in the artist name'` + data.body.tracks.items);
@@ -186,6 +199,7 @@ export async function returnNextTracks(ArtistName, AccessToken) {
                   const QueueURI = data.body.tracks.items[i].uri;
                   //console.log(QueueURI);
                   spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
+                  currentSongCount++;
                 }
                 return "Some other tracks by the same artist were added to your queue~~";
               }
@@ -199,7 +213,25 @@ export async function returnNextTracks(ArtistName, AccessToken) {
         console.error("Couldn't get artist's tracks: "+error);
         return "Couldn't get artist's tracks! :(";
       });
+}
+
+//Called to clear the queue and to get new artist's tracks
+async function clearQueue(QueueCount, AccessToken) {
+  spotifyApi.setAccessToken(AccessToken);
+
+  for (let i = 0; i < QueueCount; i++) {
+    spotifyApi.skipToNext()
+      .then(() => {
+        console.log(`Successfully skipped song ${i}`);
+      })
+      .catch((error) => {
+        //If there is an error, there are therefore no more songs to skip. Break out of the loop:
+        if (error) {
+          return null;
+        }
+      })
   }
+}
 
 
 //TEST: --IT WORKS 

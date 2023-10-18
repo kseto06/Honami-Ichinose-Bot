@@ -3,9 +3,15 @@
 * @author Kaden (Winterlicia) <>
 */
 
+/*
+* INSTRUCTIONS -- RUNNING THE CODE
+* * * If you want to do public hosting for Spotify and want to run the bot at the same time: run "npm start"
+* * * If you want to do private hosting (i.e. security purposes) and want to run the bot:    run "node Main.js"
+*/
+
 /*IDEAS:
 *  Add a calendar function that allows the user to see the things that they need to do -- COMPLETED
-*  Add Spotify API function to play music on Discord API
+*  Add Spotify API function to play music on Discord API --WORK IN PROGRESS
 */
 
 //Init discord.js, Table, fetch, SpotifyAPI
