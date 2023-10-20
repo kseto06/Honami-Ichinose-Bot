@@ -45,7 +45,7 @@ const spotifyApi = new SpotifyWebApi({
 import { Table } from 'embed-table'; //Documentation: https://github.com/TreeFarmer/embed-table/tree/master
 const table = new Table ({
     titles: ['**Tasks**', '**Subject**', '**Due Date**'],
-    titleIndexes: [0, 65, 105],
+    titleIndexes: [0, 61, 100],
     columnIndexes: [0, 30, 50],
     start: '`',
     end: '`',
