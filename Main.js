@@ -488,7 +488,7 @@ client.on("messageCreate", async message => {
             .catch((error) => {
                 console.error('Error in setInterval:', error);
             });
-      }, 5000);
+      }, 10000);
 });
 
 client.login(config.token);
