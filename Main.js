@@ -460,17 +460,6 @@ client.on("messageCreate", async message => {
             .then(() => {
                 message.channel.send("Alright, skipping to the next song in queue~~");
             })
-            .then(() => {
-                setTimeout(async () => {
-                    spotifyApi.getMyCurrentPlayingTrack()
-                    .then((currentSong) => {
-                        message.channel.send(`Now playing: **${currentSong.body.item.name}**, by **${currentSong.body.item.artists[0].name}**~~`);
-                    })
-                    .catch((error) => {
-                        console.error("Error in getting the current playback state of the next track: "+error);
-                    });
-                }, 5000);
-            })
             .catch((error) => {
                 console.error("Error in skipping to the next song: "+error);
             });
@@ -478,17 +467,6 @@ client.on("messageCreate", async message => {
         spotifyApi.skipToPrevious()
             .then(() => {
                 message.channel.send("Alright, playing back your previous song...");
-            })
-            .then(() => {
-                setTimeout(async () => {
-                    spotifyApi.getMyCurrentPlayingTrack()
-                    .then((currentSong) => {
-                        message.channel.send(`Now playing: **${currentSong.body.item.name}**, by **${currentSong.body.item.artists[0].name}**~~`);
-                    })
-                    .catch((error) => {
-                        console.error("Error in getting the current playback state of the next track: "+error);
-                    });
-                }, 3000);
             })
             .catch((error) => {
                 console.error("Error in skipping back to the previous song: "+error);
