@@ -57,7 +57,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, chec
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 
@@ -381,7 +381,7 @@ client.on("messageCreate", async message => {
                                     .then((success) => {
                                         //Send current song playing (only when it is actually playing):
                                         if (success) {
-                                            message.channel.send('\n' + (`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**`));
+                                            message.channel.send(`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**~~`);
                                             return;
                                         } else {
                                             message.channel.send("Couldn't find the song you wanted to play! :(");
@@ -392,7 +392,7 @@ client.on("messageCreate", async message => {
                                 //When the song is over, play the next song in the artist's top tracks:
                                 await returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
                                     .then(() => {
-                                        message.channel.send(`Some more tracks by the **${input[1].trim()}** have been added to the queue~~`);
+                                        message.channel.send(`Some more tracks by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}** have been added to the queue~~`);
                                     })
                                     .catch((error) => {
                                         console.error("An error occurred: "+error);
@@ -499,6 +499,18 @@ client.on("messageCreate", async message => {
     if (content === "!build cr") {
         await message.reply("I'll make you the strongest deck there is >:D");
     }
+
+    //Periodically check the current track (SpotifyFunction)
+    setInterval(() => {
+        checkCurrentTrack(newAccessToken)
+            .then((song_and_artist) => {
+                //[0] contains song, [1] contains artist
+                message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`); 
+            })        
+            .catch((error) => {
+                console.error('Error in setInterval:', error);
+            });
+      }, 5000);
 });
 
 client.login(config.token);

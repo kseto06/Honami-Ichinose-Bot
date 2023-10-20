@@ -233,6 +233,30 @@ async function clearQueue(QueueCount, AccessToken) {
   }
 }
 
+var storedSong = null;
+export async function checkCurrentTrack(AccessToken) {
+  spotifyApi.setAccessToken(AccessToken);
+    try {
+        const currentSong = await spotifyApi.getMyCurrentPlayingTrack()
+        //If there is no current song playing, break
+        if (!currentSong || !currentSong.body || !currentSong.body.item) {
+          console.error("No current song playing");
+          return null;
+        }
+        const currentSongName = (await currentSong).body.item.name;
+        //If the stored song is still equal to the current song, that means the song hasn't changed yet, break
+        if (String(storedSong) === String(currentSongName)) {
+          return null; 
+        } 
+        //Else: Get the track of the new song and print it, overwriting the last instance of storedSong with the currentSong.
+        storedSong = currentSong.body.item.name;
+        const artistName = currentSong.body.item.artists[0].name
+        return [currentSongName, artistName];
+    } catch (error) {
+      console.error('Error checking current track:', error);
+    }
+}
+
 
 //TEST: --IT WORKS 
 /*
