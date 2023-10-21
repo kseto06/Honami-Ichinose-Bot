@@ -102,8 +102,8 @@ export function authorizeSpotify() {
     const accessToken = tokenData.access_token;
     const refreshToken = tokenData.refresh_token;
 
-    if (accessToken) {
-      resolve(accessToken);
+    if (accessToken && refreshToken) {
+      resolve({ accessToken, refreshToken });
     } else {
       reject(new Error('Access token not obtained'));
     }
@@ -215,6 +215,36 @@ export async function returnNextTracks(ArtistName, AccessToken) {
       });
 }
 
+export async function getPlaylist(PlaylistName, AccessToken) {
+  const playlistArray = [];
+  await spotifyApi.getAccessToken(AccessToken);
+  try {
+    await spotifyApi.searchPlaylists(PlaylistName)
+      .then((playlist) => {
+        if (playlist.body.playlists.items > 0) {
+          const playlistID = playlist.body.playlists.items[0];
+        } else {
+          console.log("Playlist not found");
+        }
+
+        spotifyApi.getPlaylistTracks(playlistID)
+          .then((songs) => {
+            for (let i = 0; i < songs.length; i++) {
+              playlistArray.push(songs.body.items.tracks.track.name);
+              const QueueURI = data.body.tracks.items[i].uri;
+                  //console.log(QueueURI);
+                  spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
+            }
+          })
+      })
+      .catch((error) => {
+        console.log("Error in searching for the playlist: "+error);
+      });
+  } catch (error) {
+      console.error("Error getting playlist: "+error);
+  }
+}
+
 //Called to clear the queue and to get new artist's tracks
 async function clearQueue(QueueCount, AccessToken) {
   spotifyApi.setAccessToken(AccessToken);
@@ -251,12 +281,37 @@ export async function checkCurrentTrack(AccessToken) {
         //Else: Get the track of the new song and print it, overwriting the last instance of storedSong with the currentSong.
         storedSong = currentSong.body.item.name;
         const artistName = currentSong.body.item.artists[0].name
+        //Since there is a new track, we can reduce currentSongCount to gradually reset it:
+        currentSongCount--;
         return [currentSongName, artistName];
     } catch (error) {
-      console.error('Error checking current track:', error);
+      console.error('Error checking current track: '+error);
     }
 }
 
+//Function to request a refresh token if the current access token has expired.
+export async function requestRefresh(RefreshToken, Error) {
+  spotifyApi.setRefreshToken(RefreshToken);
+
+  spotifyApi.refreshAccessToken()
+    .then((data) => {
+      if (String(Error).includes('The access token expired.')) {
+        // Save the access token so that it's used in future calls
+        const newAccessToken = data.body['access_token'];
+        spotifyApi.setAccessToken(newAccessToken);
+        console.log("Access token has been refreshed: "+newAccessToken);
+
+        //Return the new access token, and set it equal to the global variable in Main.js
+        return newAccessToken;
+      } else {
+        console.error("The access token hasn't expired yet");
+        return null;
+      }
+    })
+    .catch((error) => {
+      console.error("Error in refreshing the token: "+error);
+    });
+}
 
 //TEST: --IT WORKS 
 /*
