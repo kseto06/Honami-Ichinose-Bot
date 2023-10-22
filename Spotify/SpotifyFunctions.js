@@ -133,34 +133,43 @@ export async function playSong(songName, artistName, accessToken) {
       console.log("Song Name: "+songName);
       console.log("Artist Name: "+artistName);
       const searchResults = await spotifyApi.searchTracks(`track:${songName} artist:${artistName}`);
+      try {
+        if (searchResults.body.tracks.total > 0) {
+            const trackURI = searchResults.body.tracks.items[0].uri;
 
-      if (searchResults.body.tracks.total > 0) {
-          const trackURI = searchResults.body.tracks.items[0].uri;
+          try {
+            // Spotify Web API to get user's device
+            const devicesData = await spotifyApi.getMyDevices();
+            const devices = devicesData.body.devices;
 
-          // Spotify Web API to get user's device
-          const devicesData = await spotifyApi.getMyDevices();
-          const devices = devicesData.body.devices;
+              if (devices.length > 0) {
+                  const activeDeviceID = devices[0].id;
+                  console.log('Active Device ID: ', activeDeviceID);
+                  
+                  // Play the track on the active device
+                  await spotifyApi.play({ uris: [trackURI], device_id: activeDeviceID });
 
-          if (devices.length > 0) {
-              const activeDeviceID = devices[0].id;
-              console.log('Active Device ID: ', activeDeviceID);
-              
-              // Play the track on the active device
-              await spotifyApi.play({ uris: [trackURI], device_id: activeDeviceID });
-
-              // You may want to return a success message or result here
-              return true;
-          } else {
-              console.log('No active devices found');
-              throw new Error("Device not found");
-          }
-      } else {
+                  // You may want to return a success message or result here
+                  return true;
+              } else {
+                  console.log('No active devices found');
+                  return false;
+              } 
+            } catch (error) {
+                console.error("Couldn't get devices: "+error);
+                return null; 
+            }
+        } else {
           return false;
-          throw new Error("Could not get searchResults");
+        }
+      } catch (error) {
+        console.error("Couldn't get Search Results: "+error);
+        return null;
       }
   } catch (error) {
-      console.error('Error:', error);
-      throw error; // Propagate the error to the calling function
+      console.error("Couldn't call playSong function: "+ error);
+      return null;
+      //throw error; // Propagate the error to the calling function
   }
 }
 
@@ -168,6 +177,8 @@ export async function returnNextTracks(ArtistName, AccessToken) {
   //console.log(AccessToken);
   spotifyApi.setAccessToken(AccessToken);
   //Clear the queue (if possible): -- use skip function? Reset global variable to 0?
+
+  /*
   clearQueue(currentSongCount, AccessToken)
     .then(() => {
       //Reset current song count to count the next queue:
@@ -176,6 +187,7 @@ export async function returnNextTracks(ArtistName, AccessToken) {
     .catch((error) => {
       console.error("Error in clearing the queue (returnNextTracks): "+error);
     });
+  */
 
     //Search for other tracks by the same artist:
     spotifyApi.searchTracks(`artist:${ArtistName}`)
@@ -280,7 +292,7 @@ export async function checkCurrentTrack(AccessToken) {
         } 
         //Else: Get the track of the new song and print it, overwriting the last instance of storedSong with the currentSong.
         storedSong = currentSong.body.item.name;
-        const artistName = currentSong.body.item.artists[0].name
+        const artistName = currentSong.body.item.artists[0].name;
         //Since there is a new track, we can reduce currentSongCount to gradually reset it:
         currentSongCount--;
         return [currentSongName, artistName];
@@ -292,10 +304,11 @@ export async function checkCurrentTrack(AccessToken) {
 //Function to request a refresh token if the current access token has expired.
 export async function requestRefresh(RefreshToken, Error) {
   spotifyApi.setRefreshToken(RefreshToken);
+  Error = String(Error).toLowerCase();
 
   spotifyApi.refreshAccessToken()
     .then((data) => {
-      if (String(Error).includes('The access token expired.')) {
+      if (Error.includes('the access token expired')) {
         // Save the access token so that it's used in future calls
         const newAccessToken = data.body['access_token'];
         spotifyApi.setAccessToken(newAccessToken);

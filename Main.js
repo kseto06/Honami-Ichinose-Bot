@@ -57,7 +57,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, chec
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -332,6 +332,7 @@ client.on("messageCreate", async message => {
             });
     }
 
+    //Authorize Spotify function
     if (content === '!authorize') {
         await message.reply("Sure!! For me to connect to Spotify and play music, I'm going to need you to make sure your Spotify app/web is opened up, with you logged in~~");
         await message.reply("Authorize here: http://127.0.0.1:8080/authorize");
@@ -342,11 +343,34 @@ client.on("messageCreate", async message => {
                 newRefreshToken = data.refreshToken;
                 console.log("Access Token: "+newAccessToken);
                 console.log("Refresh Token: "+newRefreshToken);
-                message.channel.send("Successfully authorized!!");
+                message.channel.send("Successfully authorized!! <3");
+                return true;
             })
             .catch((error) => {
+                message.channel.send("I couldn't authorize you to Spotify! :(")
                 console.log("Authorization failed: "+error);
+                return null;
             });
+    }
+
+    //Manual Request (if needed), mainly for testing purposes
+    if (content === '!refresh') {
+        await message.reply("Sure!! If your access token has expired, it is important to get a new one~~");
+
+        try {
+            const refreshedAccessToken = await requestRefresh(newRefreshToken, "The access token expired.");
+
+            //Set the current access token to the refreshed access token, so it can be used in the other functions:
+            newAccessToken = refreshedAccessToken;
+            console.log("Refreshed access token: "+newAccessToken);
+            message.channel.send("Access token successfully refreshed!! <3");
+            return true;
+
+        } catch (error) {
+            message.channel.send("I wasn't able to refresh your access token!! :(");
+            console.error("Error in calling the requestRefresh function: "+error);
+            return null;
+        }
     }
 
     var enableMusic = false;
@@ -376,9 +400,16 @@ client.on("messageCreate", async message => {
                     const playMusicListener = async (input) => {
                         console.log("Attempt to log access token from global declare: "+newAccessToken);
                         try {
-                            input = String(input).split(','); //input[0] = songName, input[1] = artistName
-                            let SongName = input[0].trim();
-                            let ArtistName = input[1].trim().toLowerCase();
+                            try {
+                                input = String(input).split(','); //input[0] = songName, input[1] = artistName
+                                var SongName = input[0].trim();
+                                var ArtistName = input[1].trim().toLowerCase();
+                            } catch (error) {
+                                console.error("Error in trimming the song name and artist name (maybe due to a lack of two inputted variables): "+error);
+                                message.channel.send("Invalid input!!");
+                                return null;
+                            }
+
                             try {
                                 playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken)
                                     .then((success) => {
@@ -390,7 +421,10 @@ client.on("messageCreate", async message => {
                                             message.channel.send("Couldn't find the song you wanted to play! :(");
                                             return;
                                         }
-                                    });                           
+                                    })
+                                    .catch((error) => {
+                                        console.error("Error occurred in playSong function: "+error);
+                                    })                           
 
                                 //When the song is over, play the next song in the artist's top tracks:
                                 await returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
@@ -482,17 +516,20 @@ client.on("messageCreate", async message => {
     }
 
     //Periodically check the current track (SpotifyFunction)
-    setInterval(() => {
-        checkCurrentTrack(newAccessToken)
+    setInterval(async () => {
+        await spotifyApi.setAccessToken(newAccessToken);
+        await checkCurrentTrack(newAccessToken)
             .then((song_and_artist) => {
                 //[0] contains song, [1] contains artist
                 if (song_and_artist === null) { return; }
                 message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`); 
+                return true;
             })        
             .catch((error) => {
                 console.error('Error in setInterval: '+error);
+                return null;
             });
-      }, 7000);
+    }, 7000);
 });
 
 client.login(config.token);
