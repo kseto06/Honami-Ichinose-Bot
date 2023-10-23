@@ -302,28 +302,30 @@ export async function checkCurrentTrack(AccessToken) {
 }
 
 //Function to request a refresh token if the current access token has expired.
-export async function requestRefresh(RefreshToken, Error) {
-  spotifyApi.setRefreshToken(RefreshToken);
-  Error = String(Error).toLowerCase();
+export async function requestRefresh(RefreshToken, error) {
+  return new Promise((resolve, reject) => {
+    spotifyApi.setRefreshToken(RefreshToken);
+    error = String(error).toLowerCase();
 
-  spotifyApi.refreshAccessToken()
-    .then((data) => {
-      if (Error.includes('the access token expired')) {
-        // Save the access token so that it's used in future calls
-        const newAccessToken = data.body['access_token'];
-        spotifyApi.setAccessToken(newAccessToken);
-        console.log("Access token has been refreshed: "+newAccessToken);
+    spotifyApi.refreshAccessToken()
+      .then((data) => {
+        if (error.includes('the access token expired')) {
+          // Save the access token so that it's used in future calls
+          const newAccessToken = data.body['access_token'];
+          console.log("Access token has been refreshed: "+newAccessToken);
 
-        //Return the new access token, and set it equal to the global variable in Main.js
-        return newAccessToken;
-      } else {
-        console.error("The access token hasn't expired yet");
-        return null;
-      }
+          //Return the new access token, and set it equal to the global variable in Main.js
+          resolve(String(newAccessToken));
+        } else {
+          console.error("The access token hasn't expired yet");
+          reject(new Error('Unable to refresh the token'));
+        }
+
     })
     .catch((error) => {
       console.error("Error in refreshing the token: "+error);
     });
+  });
 }
 
 //TEST: --IT WORKS 

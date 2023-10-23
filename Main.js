@@ -358,7 +358,7 @@ client.on("messageCreate", async message => {
         await message.reply("Sure!! If your access token has expired, it is important to get a new one~~");
 
         try {
-            const refreshedAccessToken = await requestRefresh(newRefreshToken, "The access token expired.");
+            const refreshedAccessToken = await requestRefresh(newRefreshToken, "the access token expired");
 
             //Set the current access token to the refreshed access token, so it can be used in the other functions:
             newAccessToken = refreshedAccessToken;
