@@ -12,6 +12,7 @@
 /*IDEAS:
 *  Add a calendar function that allows the user to see the things that they need to do -- COMPLETED
 *  Add Spotify API function to play music on Discord API --WORK IN PROGRESS
+*  Add ChatGPT Functions
 */
 
 //Init discord.js, Table, fetch, SpotifyAPI
@@ -423,6 +424,13 @@ client.on("messageCreate", async message => {
                                         }
                                     })
                                     .catch((error) => {
+                                        if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                                            message.channel.send("Couldn't find your device!");
+                                        } else if (String(error).includes("No token provided")) {
+                                            message.channel.send("You haven't authorized with Spotify yet!!")
+                                        } else {
+                                            message.channel.send("Couldn't play your chosen song!");
+                                        }
                                         console.error("Error occurred in playSong function: "+error);
                                     })                           
 
@@ -433,10 +441,18 @@ client.on("messageCreate", async message => {
                                     })
                                     .catch((error) => {
                                         console.error("An error occurred: "+error);
-                                        message.channel.send("Couldn't get your next tracks! :(");
+                                        if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                                            message.channel.send("Couldn't find your device!");
+                                        } else if (String(error).includes("No token provided")) {
+                                            message.channel.send("You haven't authorized with Spotify yet!!");
+                                        } else {
+                                            message.channel.send("Couldn't get your next tracks! :(");
+                                        }
+                                        
                                    });
 
                             } catch (error) {
+                                message.channel.send("Couldn't get your next tracks! :(");
                                 console.error("Error with playing the song: "+error);
                                 await message.channel.send("Your song wasn't found~~ Check if your song really exists!");
                             }
@@ -481,7 +497,14 @@ client.on("messageCreate", async message => {
             })
             .catch((error) => {
                 //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
-                console.log('Something went wrong!', error);
+                console.log("Error pausing song: "+error);
+                if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                    message.channel.send("Couldn't find your device!");
+                } else if (String(error).includes("No token provided")) {
+                    message.channel.send("You haven't authorized with Spotify yet!!")
+                } else {
+                    message.channel.send("Couldn't resume your song!");
+                }
             });
     } else if (content === '!resume') {
         spotifyApi.play()
@@ -490,7 +513,14 @@ client.on("messageCreate", async message => {
             })
             .catch((error) => {
                 //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
-                console.log('Something went wrong!', error);
+                console.log("Error resuming song: "+error);
+                if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                    message.channel.send("Couldn't find your device!");
+                } else if (String(error).includes("No token provided")) {
+                    message.channel.send("You haven't authorized with Spotify yet!!")
+                } else {
+                    message.channel.send("Couldn't resume your song!");
+                }
             });
     } else if (content === '!skip to next') {
         spotifyApi.skipToNext()
@@ -499,6 +529,13 @@ client.on("messageCreate", async message => {
             })
             .catch((error) => {
                 console.error("Error in skipping to the next song: "+error);
+                if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                    message.channel.send("Couldn't find your device!");
+                } else if (String(error).includes("No token provided")) {
+                    message.channel.send("You haven't authorized with Spotify yet!!")
+                } else {
+                    message.channel.send("Couldn't resume your song!");
+                }
             });
     } else if (content === '!skip to previous') {
         spotifyApi.skipToPrevious()
@@ -507,6 +544,13 @@ client.on("messageCreate", async message => {
             })
             .catch((error) => {
                 console.error("Error in skipping back to the previous song: "+error);
+                if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                    message.channel.send("Couldn't find your device!");
+                } else if (String(error).includes("No token provided")) {
+                    message.channel.send("You haven't authorized with Spotify yet!!");
+                } else {
+                    message.channel.send("Couldn't resume your song!");
+                }
             });
     }
 
@@ -523,11 +567,15 @@ client.on("messageCreate", async message => {
                 //[0] contains song, [1] contains artist
                 if (song_and_artist === null) { return; }
                 message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`); 
-                return true;
+                return true; //return true to simulate success
             })        
-            .catch((error) => {
+            .catch((error) => {     
+                if (String(error).includes('expired') && String(newRefreshToken !== null)) {
+                    requestRefresh(newRefreshToken, error);
+                    return true; //return true to simulate success in refreshing
+                }                                     
                 console.error('Error in setInterval: '+error);
-                return null;
+                return null; //return null to simulate failure      
             });
     }, 7000);
 });
