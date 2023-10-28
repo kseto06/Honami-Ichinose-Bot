@@ -417,10 +417,34 @@ client.on("messageCreate", async message => {
                                         //Send current song playing (only when it is actually playing):
                                         if (success) {
                                             console.log(`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**~~`);
-                                            return;
+                                            return true;
                                         } else {
                                             message.channel.send("Couldn't find the song you wanted to play! :(");
-                                            return;
+                                            return false;
+                                        }
+                                    })
+                                    .then((success) => { //return success of the first .then chain, if true get new tracks, if false send an error message
+                                        if (success) {
+                                            //When the song is over, play the next song in the artist's top tracks:
+                                            returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
+                                                .then(() => {
+                                                    message.channel.send(`Some more tracks by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}** have been added to the queue~~`);
+                                                    return true;
+                                                })
+                                                .catch((error) => {
+                                                    console.error("An error occurred: "+error);
+                                                    if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                                                        message.channel.send("Couldn't find your device!");
+                                                    } else if (String(error).includes("No token provided")) {
+                                                        message.channel.send("You haven't authorized with Spotify yet!!");
+                                                    } else {
+                                                        message.channel.send("Couldn't get your next tracks! :(");
+                                                    }
+                                                    return null;
+                                                });
+                                        } else {
+                                            message.channel.send("Couldn't get the next tracks since I couldn't find the song you wanted to play!! :(");
+                                            return null;
                                         }
                                     })
                                     .catch((error) => {
@@ -432,29 +456,14 @@ client.on("messageCreate", async message => {
                                             message.channel.send("Couldn't play your chosen song!");
                                         }
                                         console.error("Error occurred in playSong function: "+error);
-                                    })                           
-
-                                //When the song is over, play the next song in the artist's top tracks:
-                                await returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
-                                    .then(() => {
-                                        message.channel.send(`Some more tracks by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}** have been added to the queue~~`);
-                                    })
-                                    .catch((error) => {
-                                        console.error("An error occurred: "+error);
-                                        if (String(error).includes("NO_ACTIVE_DEVICE")) {
-                                            message.channel.send("Couldn't find your device!");
-                                        } else if (String(error).includes("No token provided")) {
-                                            message.channel.send("You haven't authorized with Spotify yet!!");
-                                        } else {
-                                            message.channel.send("Couldn't get your next tracks! :(");
-                                        }
-                                        
-                                   });
+                                        return null;
+                                    });                 
 
                             } catch (error) {
                                 message.channel.send("Couldn't get your next tracks! :(");
                                 console.error("Error with playing the song: "+error);
                                 await message.channel.send("Your song wasn't found~~ Check if your song really exists!");
+                                return null;
                             }
                             client.off('messageCreate', playMusicListener);
                             client.off('messageCreate', musicListener);
