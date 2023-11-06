@@ -145,7 +145,7 @@ export async function resolveTask(taskToResolve) {
                         line = result[j];
                         split = line.split(',');
                         currentTask = new Task(split[0], split[1], split[2]);
-                        if (j === result.length - 1) {
+                        if (j === result.length - 1) { //At the end of the file, we don't want to unnecessarily create a new line as this will cause exceptions.
                             fs.appendFileSync(taskFilePath, String(currentTask), 'utf-8');
                         } else {
                             fs.appendFileSync(taskFilePath, String(currentTask) + '\n', 'utf-8');
@@ -162,6 +162,76 @@ export async function resolveTask(taskToResolve) {
             .catch((error) => {
                 console.log("An error occurred: "+error);
                 reject("Your to-do list is empty~~");
+            })
+    });
+}
+
+//Still need to test this:
+export async function reviseTask(taskName, taskParameter, revisedParameter) { //String, String, String
+    const taskFilePath = 'TestingList.txt';
+    var taskFound = false;
+    const taskToRevise = null;
+    taskParameter = String(taskParameter).toLowerCase().replace(/\s+/g, '');
+
+    return new Promise((resolve, reject) => {
+        //Return the ArrayList and match the task that needs to be deleted:
+        viewTask()
+            .then((result) => {
+                for (let i = 0; i < result.length; i++) {
+                    var line = result[i];
+                    var split = line.split(',');
+                    var currentTask = new Task(split[0], split[1], split[2]);
+                    console.log("TEST: "+ (String(taskName).toLowerCase() === currentTask.getTask().toLowerCase()));
+                    if (String(taskName).toLowerCase() === currentTask.getTask().toLowerCase()) {
+                        taskFound = true;
+                        //Now compare the parameter and set it with the revisedParameter
+                        if (taskParameter.includes('task')) {
+                            taskToRevise = currentTask.setTask(revisedParameter);
+                        } else if (taskParameter.includes('subject')) {
+                            taskToRevise = currentTask.setSubject(revisedParameter);
+                        } else if (taskParameter.includes('due') || taskParameter.includes('date')) {
+                            taskToRevise = currentTask.setDueDate(revisedParameter);
+                        } else {
+                            taskToRevise = null;
+                            reject(null); //If none of the parameters match, then reject null to indicate invalid parameter
+                        }
+
+                        //Replace the data at the specific index with the revisedTask
+                        if (taskToRevise !== null) {
+                            result[i] = taskToRevise;
+                            break;
+                        } else {
+                            reject(null);
+                        }
+                    } 
+                }
+
+                if (taskFound === true) {
+                    //Erase data in text file to later append:
+                    fs.writeFileSync(taskFilePath, '');
+
+                    //Write back the new updated ArrayList in TaskList.txt:
+                    //Erase text file and replace it with updated tasks
+                    for (let j = 0; j < result.length; j++) {
+                        split = result[j].split(',');
+                        currentTask = new Task(split[0], split[1], split[2]);
+                        if (j === result.length - 1) {
+                            fs.appendFileSync(taskFilePath, String(currentTask), 'utf-8');
+                        } else {
+                            fs.appendFileSync(taskFilePath, String(currentTask) + '\n', 'utf-8');
+                        }
+                        console.log("Task #"+j+" written successfully.");
+                        if (j === (result.length - 1)) { break; }
+                    }
+                    resolve(true); //Resolve true to indicate success
+
+                } else {
+                    reject(null); //Reject null to indicate failure
+                }
+            })
+            .catch((error) => {
+                console.log("An error occurred: "+error);
+                reject(null);
             })
     });
 }

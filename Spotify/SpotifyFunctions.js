@@ -13,6 +13,8 @@ const PORT = 8080;
 
 //Init config.json for id and secret
 import fs from 'fs';
+import { request } from 'http';
+import { error } from 'console';
 const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
 
 const clientId = config.spotify_clientid; // Replace with your Spotify client ID
@@ -160,7 +162,7 @@ export async function playSong(songName, artistName, accessToken) {
                 return null; 
             }
         } else {
-          return false;
+          return null;
         }
       } catch (error) {
         console.error("Couldn't get Search Results: "+error);
@@ -175,22 +177,19 @@ export async function playSong(songName, artistName, accessToken) {
 
 export async function returnNextTracks(ArtistName, AccessToken) {
   //console.log(AccessToken);
-  spotifyApi.setAccessToken(AccessToken);
-  //Clear the queue (if possible): -- use skip function? Reset global variable to 0?
-
-  /*
-  clearQueue(currentSongCount, AccessToken)
+  await spotifyApi.setAccessToken(AccessToken);
+  
+  //Clear the queue (if possible):
+  await clearQueue(AccessToken)
     .then(() => {
-      //Reset current song count to count the next queue:
-      currentSongCount = 0;
+      console.log("Queue cleared successfully!");
     })
     .catch((error) => {
       console.error("Error in clearing the queue (returnNextTracks): "+error);
     });
-  */
 
     //Search for other tracks by the same artist:
-    spotifyApi.searchTracks(`artist:${ArtistName}`)
+    await spotifyApi.searchTracks(`artist:${ArtistName}`)
       .then((data) => {
         console.log(`Search tracks by "${ArtistName}" in the artist name'` + data.body.tracks.items);
 
@@ -202,9 +201,6 @@ export async function returnNextTracks(ArtistName, AccessToken) {
               if (devices.length > 0) {
                 const activeDeviceID = devices[0].id;
                 console.log('Active Device ID: ', activeDeviceID);
-    
-                // Play the next track
-                // spotifyApi.play({ uris: [data.body.tracks.items[6].uri], device_id: activeDeviceID });
                 
                 //Add the rest of the artist's songs to the queue?
                 for (let i = 0; i < data.body.tracks.items.length; i++) {
@@ -229,14 +225,17 @@ export async function returnNextTracks(ArtistName, AccessToken) {
 
 export async function getPlaylist(PlaylistName, AccessToken) {
   const playlistArray = [];
+  const playlistID = null;
+
   await spotifyApi.getAccessToken(AccessToken);
   try {
     await spotifyApi.searchPlaylists(PlaylistName)
       .then((playlist) => {
         if (playlist.body.playlists.items > 0) {
-          const playlistID = playlist.body.playlists.items[0];
+          playlistID = playlist.body.playlists.items[0];
         } else {
           console.log("Playlist not found");
+          return null;
         }
 
         spotifyApi.getPlaylistTracks(playlistID)
@@ -258,20 +257,29 @@ export async function getPlaylist(PlaylistName, AccessToken) {
 }
 
 //Called to clear the queue and to get new artist's tracks
-async function clearQueue(QueueCount, AccessToken) {
+async function clearQueue(AccessToken) {
   spotifyApi.setAccessToken(AccessToken);
+  var errorEncountered = false;
 
-  for (let i = 0; i < QueueCount; i++) {
-    spotifyApi.skipToNext()
-      .then(() => {
-        console.log(`Successfully skipped song ${i}`);
-      })
-      .catch((error) => {
-        //If there is an error, there are therefore no more songs to skip. Break out of the loop:
-        if (error) {
-          return null;
-        }
-      })
+  try {
+    // Get the current queue data
+    const QueueData = await getQueue(AccessToken);
+    if (QueueData === 0) { return; }
+    console.log('Current Queue Length (clearQueue function): ' + QueueData.length);
+    if (QueueData.length === 0) { return; }
+
+    for (let i = 0; i < QueueData.length; i++) {
+      try {
+        await spotifyApi.skipToNext();
+        console.log(`Successfully skipped song number ${i}`);
+      } catch (error) {
+        console.error('Error skipping to the next song (clearQueue function): '+error);
+        errorEncountered = true;
+        break; // Exit the loop if an error occurs
+      }
+    }
+  } catch (error) {
+    console.error('Error calling getQueue: '+error);
   }
 }
 
@@ -325,6 +333,118 @@ export async function requestRefresh(RefreshToken, error) {
     .catch((error) => {
       console.error("Error in refreshing the token: "+error);
     });
+  });
+}
+
+export async function setVolume(AccessToken, volumeValue) {
+  return new Promise((resolve, reject) => {
+
+    // Define the API endpoint
+    const apiUrl = `https://api.spotify.com/v1/me/player/volume?volume_percent=${volumeValue}`;
+
+    // Define the headers, including the Authorization header with your access token
+    const headers = {
+      'Authorization': `Bearer ${AccessToken}`,
+      'Content-Type': 'application/json' // Spotify API requires 'Content-Type' header
+    };
+
+    // Create the request object
+    const requestOptions = {
+      method: 'PUT',
+      headers: headers,
+      body: null // No request body needed for this request
+    };
+
+    // Perform the PUT request to change the volume
+    fetch(apiUrl, requestOptions) 
+      .then((response) => {
+        try {
+
+          if (response.status === 204) {
+            // 204 status indicates success with no content
+            console.log('Volume changed successfully');
+            resolve(true);
+          } else if (response.ok) {
+            return response.json();
+          } else {
+            throw new Error('Error changing volume: '+response.statusText);
+          }
+
+        } catch (error) {
+            console.error("Error in changing volume: "+error);
+            reject(false);
+        }
+      })
+      .then((data) => {
+        console.log('Volume changed successfully: '+data);
+        resolve(true);
+      })
+      .catch((error) => {
+        console.error('Error changing volume: '+error);
+        reject(false);
+      });
+  });
+}
+
+async function getQueue(AccessToken) {
+  return new Promise((resolve, reject) => {
+    
+    //Define the API Endpoint => in this case, the queue
+    const url = `https://api.spotify.com/v1/me/player/queue`;
+
+    // Define the headers, including the Authorization header with your access token
+    const headers = {
+      'Authorization': `Bearer ${AccessToken}`,
+    };
+
+    const requestOptions = {
+      method: 'GET',
+      headers: headers, 
+    }
+
+    fetch(url, requestOptions)
+      .then((response) => {
+        try {
+          if (response.ok) {
+            return response.json();
+          }
+        } catch (error) {
+          console.error("Error in getting the JSON queue data: "+error);
+          reject(false);
+        }
+      })
+      .then((data) => {
+        try {
+          //Get the 'queue' specific array from response.json data
+          const queue = data.queue;
+          const songsInQueue = [];
+
+          if (queue.length === 0) { resolve(0); }
+
+          for (let i = 0; i < queue.length; i++) {
+            const songData = queue[i];
+
+            //Create song object (idk might be useful in later stages of development to have more info)
+            const song = {
+              id: songData.id,
+              name: songData.name,
+              artist: songData.artists[0].name,
+              album: songData.album.name,
+              duration_ms: songData.duration_ms,
+            };
+            songsInQueue.push(song);
+          }
+          console.log('Current Queue Length: '+songsInQueue.length);
+          resolve(songsInQueue);
+        } catch (error) {
+          console.error("Couldn't get arraylist data of songs in queue: "+error);
+          reject(null);
+        }
+      })
+      .catch((error) => {
+        console.error("Error in fetching queue data (from fetch function): "+error);
+        reject(false);
+      })
   });
 }
 

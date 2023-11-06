@@ -54,11 +54,11 @@ const table = new Table ({
 });
 
 //Init functions, arrays, classes, global variables
-import { calculator, randomizeArray, addTask, viewTask, resolveTask, sleep, checkDueDate } from './Functions.js';
+import { calculator, randomizeArray, addTask, viewTask, resolveTask, reviseTask, sleep, checkDueDate } from './Functions.js';
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -166,6 +166,7 @@ client.on("messageCreate", async message => {
     var enableCalendar = false;
     var needToAdd = false;
     var needToResolve = false;
+    var needToRevise = false;
     if (content === "!calendar") {
         await message.reply("Sure, would you like to view your current tasks, do you already have another task to add, or have you finished a task?? :thinking:");
         await message.channel.send("!cancel, !view, !add, !resolve");
@@ -254,7 +255,7 @@ client.on("messageCreate", async message => {
                     needToResolve = true;
 
                     const removeTask = async (taskName) => {
-
+                        console.log("taskName: "+taskName)
                         if (needToResolve === true) {
                             resolveTask(taskName)
                                 .then((result) => {
@@ -278,7 +279,108 @@ client.on("messageCreate", async message => {
                     client.on('messageCreate', removeTask);
                     return;
 
+                } else if (nestedMessage === '!revise') {
+                    await message.channel.send("Alright, enter the name of the task you want to revise~~");
+                    sleep(1000);
+                    await message.channel.send("Only the TASK NAME, you hear me?! If you don't follow my instructions I'm not gonna help you >:(")
+                    sleep(1000);
+                    needToRevise = true;
+                    let isChosen = false;
+                    let dataAdded = false;
+                    var updatedData = null;
+                    var parameterChoice = null;
+                    var assignedChoice = null;
+
+                    const taskRevision = async (taskName) => {
+
+                        if (needToRevise === true) {
+                            await message.channel.send("Which part of the task do you want to change - the task name, the subject, or the due date?? :thinking:");
+                            try {
+                                const parameter = async (chosenParameter) => {
+                                    chosenParameter = String(chosenParameter);
+                                    let choice = null;
+
+                                    //Choose the appropriate choice based on the user's input:
+                                    if (chosenParameter.includes('task')) {
+                                        choice = 'task name';
+                                    } else if (chosenParameter.includes('subject')) {
+                                        choice = 'subject';
+                                    } else if (chosenParameter.includes('date')) {
+                                        choice = 'due date';
+                                    } else {
+                                        message.channel.send("Invalid input!! I'm going to cancel this operation~~");
+                                        client.off('messageCreate', calendarListener);
+                                        client.off('messageCreate', parameter);
+                                        client.off('messageCreate', taskRevision);
+                                        needToRevise = false;
+                                        return null;
+                                    }
+                                    client.off('messageCreate', parameter)
+                                    isChosen = true;
+                                    return { chosenParameter, choice };
+                                }
+                                //Assign the returned values to the global variables within this function:
+                                assignedChoice = parameter.choice;
+                                parameterChoice = parameter.chosenParameter;
+                            } catch (error) {
+                                console.error("Error in the parameter function: "+error);
+                                message.channel.send("Couldn't process your chosen parameter :(");
+                            }
+
+                            if (isChosen === true) {
+                                try {
+                                    await message.channel.send(`What do you want to change the **${assignedChoice}** to?? :thinking:`);
+                                    const changed = async (newData) => {
+                                        client.off('messageCreate', changed); 
+                                        return newData;
+                                    }
+                                    //Assign the returned value to the global variable within this function: 
+                                    updatedData = changed.newData;
+                                    console.log("TEST newData: "+updatedData); 
+                                    client.on('messageCreate', changed);                        
+                                    dataAdded = true;
+                                } catch (error) {
+                                    console.error("Error in the changed (newData) function: "+error);
+                                    message.channel.send("Couldn't process your new data input :(");
+                                }
+                            }
+                            
+
+                            if (dataAdded === true) {
+                                //Add global variables as the parameters for the reviseTask function
+                                await reviseTask(String(taskName), String(parameterChoice), String(updatedData))
+                                    .then((success) => {
+                                        if (success) {
+                                            message.channel.send('Your task has been successfully revised~~');
+                                            client.off('messageCreate', calendarListener);
+                                            client.off('messageCreate', taskRevision);
+                                            needToRevise = false;
+                                        } else {
+                                            message.channel.send("Couldn't revise your task!! :(");
+                                            client.off('messageCreate', calendarListener);                                        
+                                            client.off('messageCreate', taskRevision);
+                                            needToRevise = false;
+                                        }
+                                    })
+                                    .catch((error) => {
+                                        console.error('Error in trying to revise task: '+error);
+                                        message.channel.send("Couldn't revise your task!! :(");
+                                        client.off('messageCreate', calendarListener);
+                                        client.off('messageCreate', taskRevision);
+                                        needToRevise = false;
+                                        return null;
+                                    });
+                            }
+                        } else {
+                            message.channel.send("There was an error in processing your task name :(");
+                        }
+                        //Register taskRevision listener:
+                        client.on('messageCreate', taskRevision);
+                        return;     
+                    }             
+
                 } else {
+
                     if (enableCalendar !== true) {
                         return;
                     } else {
@@ -286,6 +388,7 @@ client.on("messageCreate", async message => {
                         await console.log("Invalid input: "+nestedMessage.content);
                         client.off('messageCreate', calendarListener);
                     }
+
                 }
             }
         }
@@ -329,7 +432,8 @@ client.on("messageCreate", async message => {
                 }
             })
             .catch((error) => {
-                console.error(error);
+                message.channel.send("Couldn't get your to-do tasks :(");
+                console.error("Reminder failed: "+error);
             });
     }
 
@@ -338,7 +442,7 @@ client.on("messageCreate", async message => {
         await message.reply("Sure!! For me to connect to Spotify and play music, I'm going to need you to make sure your Spotify app/web is opened up, with you logged in~~");
         await message.reply("Authorize here: http://127.0.0.1:8080/authorize");
         //Authorize Spotify with function defined in PKCE Authorization
-        await authorizeSpotify()
+        await authorizeSpotify() 
             .then((data) => {
                 newAccessToken = data.accessToken;
                 newRefreshToken = data.refreshToken;
@@ -418,12 +522,16 @@ client.on("messageCreate", async message => {
                                         if (success) {
                                             console.log(`Now playing: **${input[0].trim().split(' ').map((word) => (word[0].toUpperCase() + word.substring(1, word.length))).join(" ")}**, by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}**~~`);
                                             return true;
-                                        } else {
+                                        } else if (success === false) { //If false returned from the playSong function, device doesn't exists
+                                            message.channel.send("Couldn't find your device! :(");
+                                            return false;
+                                        } else { //If null returned, send a generic error message.
                                             message.channel.send("Couldn't find the song you wanted to play! :(");
                                             return false;
                                         }
                                     })
                                     .then((success) => { //return success of the first .then chain, if true get new tracks, if false send an error message
+                                        console.log("Value of success: "+success);
                                         if (success) {
                                             //When the song is over, play the next song in the artist's top tracks:
                                             returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
@@ -497,7 +605,9 @@ client.on("messageCreate", async message => {
         client.on('messageCreate', musicListener);
     }
 
-    //Pause and resume SpotifyAPI Commands
+    //Other SpotifyAPI Commands
+    var volumeBoolean = false;
+
     spotifyApi.setAccessToken(newAccessToken);
     if (content === '!pause') {
         spotifyApi.pause()
@@ -561,6 +671,59 @@ client.on("messageCreate", async message => {
                     message.channel.send("Couldn't resume your song!");
                 }
             });
+    } else if (content === '!volume') {
+        await message.channel.send('What % volume do you want to adjust the song to?? :thinking:');
+        sleep(1000);
+        volumeBoolean = true;
+
+        if (volumeBoolean === true) {
+            const volumeValue = async (input) => {
+                if (input.author.bot) { return; }
+                input = String(input).toLowerCase().trim();
+                console.log('Volume input: '+input);
+
+                try {
+                    //Check if the input is a number, or is not a number and as a result has returned as NaN:
+                    if (Number.isNaN(input)) { 
+                        message.channel.send('Invalid input!');
+                        volumeBoolean = false;
+                        client.off('messageCreate', volumeValue);
+                        return null; 
+                    } else {
+                        input = Math.round(Number(input));
+                        setVolume(newAccessToken, input)
+                            .then((success) => {
+                                if (success) {
+                                    message.channel.send(`Okie!! Setting volume to ${input}%...`);
+                                    volumeBoolean = false;
+                                    client.off('messageCreate', volumeValue);
+                                }
+                            })
+                            .catch((error) => {
+                                console.error("Error in setting the volume: "+error);
+                                
+                                if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                                    message.channel.send("Couldn't find your device!");
+                                } else if (String(error).includes("No token provided")) {
+                                    message.channel.send("You haven't authorized with Spotify yet!!");
+                                } else {
+                                    message.channel.send("Couldn't set your volume! :(");
+                                }
+
+                                volumeBoolean = false;
+                                client.off('messageCreate', volumeValue);
+                            });
+                    }
+                } catch (error) {
+                    message.channel.send("Couldn't get your volume value :(");
+                    console.error('Error in getting the volume value: '+error);
+                }
+            }
+            //Register the volumeValue nested listener:
+            client.on('messageCreate', volumeValue)
+        } else {
+            return;
+        }
     }
 
     //Build Clash Royale Deck
