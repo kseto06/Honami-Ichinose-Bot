@@ -274,7 +274,6 @@ export async function getPlaylist(PlaylistName, AccessToken) {
 //Called to clear the queue and to get new artist's tracks
 async function clearQueue(AccessToken) {
   spotifyApi.setAccessToken(AccessToken);
-  var errorEncountered = false;
 
   try {
     // Get the current queue data
@@ -289,7 +288,6 @@ async function clearQueue(AccessToken) {
         console.log(`Successfully skipped song number ${i}`);
       } catch (error) {
         console.error('Error skipping to the next song (clearQueue function): '+error);
-        errorEncountered = true;
         break; // Exit the loop if an error occurs
       }
     }
@@ -461,6 +459,103 @@ async function getQueue(AccessToken) {
         reject(false);
       })
   });
+}
+
+async function getAlbum(AccessToken, AlbumName) {
+  return new Promise((resolve, reject) => { 
+    const searchEndpoint = 'https://api.spotify.com/v1/search';
+
+    const searchParameters = new URLSearchParams ({
+      q: `album${AlbumName}`,
+      type: 'album',
+    });
+
+    const headers = {
+      Authorization: `Bearer ${AccessToken}`,
+    };
+
+    const url = `${searchEndpoint}?${searchParameters.toString()}`;
+
+    fetch(url, { headers: headers, })
+      .then((response) => {
+        try {
+          if (response.ok) {
+            return response.json();
+          }
+        } catch (error) {
+          console.error("Error in getting the JSON queue data: "+error);
+          reject(null);
+        }
+      })
+      //Get Album ID:
+      .then((data) => {
+        try {
+          const albums = data.albums.items;
+
+          if (albums.length > 0) {
+            const albumID = albums[0].id;
+            console.log("Fetched albumID: "+albumID);
+            return albumID;
+          } else {
+            console.error("Error in finding album");
+            reject(false);            
+          }
+        } catch (error) {
+          console.error("Error in returning the album data: "+error);
+          reject(null);
+        }
+      })
+      //Use returned Album ID to get the request the album from the API:
+      .then((returnedID) => {
+        const albumEndpoint = `https://api.spotify.com/v1/albums`;
+
+        const headers = {
+          'Authorization': `Bearer ${AccessToken}`,
+        };
+    
+        const requestOptions = {
+          method: 'GET',
+          headers: headers, 
+        };
+        
+        const albumURL = `${albumEndpoint}/${returnedID}`;
+
+        fetch(albumURL, requestOptions)
+          .then((response) => {
+            try {
+              if (response.ok) {
+                return response.json();
+              }
+            } catch (error) {
+              console.error("Error in getting the JSON queue data: "+error);
+              reject(null);
+            }
+          })
+          .catch((error) => {
+            console.error("Error in fetching the albumURL data: "+error);
+          })
+        });
+      })
+      //Use the response to return the ArrayList of songs in the album
+      .then((data) => {
+        const tracks = data.tracks.items;
+        const trackCount = data.tracks.total;
+        const songList = [];
+
+        for (let i = 0; i < trackCount; i++) {
+          const trackInfo = {
+            name: tracks[i],
+            artists: tracks.artists.map(artist => artist.name), 
+            duration_ms: tracks.duration_ms,
+          };
+          songList.push(trackInfo);
+        }
+        resolve(songList);
+      })
+      .catch((error) => {
+        console.error("Error in fetching album response: "+error);
+        reject(null);
+      });
 }
 
 //TEST: --IT WORKS 
