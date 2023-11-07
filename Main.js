@@ -62,6 +62,7 @@ import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, reques
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
+var isPaused = false;
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -503,6 +504,8 @@ client.on("messageCreate", async message => {
                     await message.channel.send("In the format of: 'Song Name', 'Artist Name'");
 
                     const playMusicListener = async (input) => {
+                        if (input.author.bot) { return; }
+
                         console.log("Attempt to log access token from global declare: "+newAccessToken);
                         try {
                             try {
@@ -516,6 +519,7 @@ client.on("messageCreate", async message => {
                             }
 
                             try {
+                                isPaused = true;
                                 playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken)
                                     .then((success) => {
                                         //Send current song playing (only when it is actually playing):
@@ -524,9 +528,11 @@ client.on("messageCreate", async message => {
                                             return true;
                                         } else if (success === false) { //If false returned from the playSong function, device doesn't exists
                                             message.channel.send("Couldn't find your device! :(");
+                                            isPaused = false;
                                             return false;
                                         } else { //If null returned, send a generic error message.
                                             message.channel.send("Couldn't find the song you wanted to play! :(");
+                                            isPaused = false;
                                             return false;
                                         }
                                     })
@@ -537,6 +543,7 @@ client.on("messageCreate", async message => {
                                             returnNextTracks(input[1].trim().toLowerCase(), newAccessToken)
                                                 .then(() => {
                                                     message.channel.send(`Some more tracks by **${input[1].trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1, word.length)).join(" ")}** have been added to the queue~~`);
+                                                    isPaused = false;
                                                     return true;
                                                 })
                                                 .catch((error) => {
@@ -548,10 +555,12 @@ client.on("messageCreate", async message => {
                                                     } else {
                                                         message.channel.send("Couldn't get your next tracks! :(");
                                                     }
+                                                    isPaused = false;
                                                     return null;
                                                 });
                                         } else {
                                             message.channel.send("Couldn't get the next tracks since I couldn't find the song you wanted to play!! :(");
+                                            isPaused = false;
                                             return null;
                                         }
                                     })
@@ -564,13 +573,15 @@ client.on("messageCreate", async message => {
                                             message.channel.send("Couldn't play your chosen song!");
                                         }
                                         console.error("Error occurred in playSong function: "+error);
+                                        isPaused = false;
                                         return null;
                                     });                 
 
                             } catch (error) {
-                                message.channel.send("Couldn't get your next tracks! :(");
-                                console.error("Error with playing the song: "+error);
+                                await message.channel.send("Couldn't get your next tracks! :(");
+                                await console.error("Error with playing the song: "+error);
                                 await message.channel.send("Your song wasn't found~~ Check if your song really exists!");
+                                isPaused = false;
                                 return null;
                             }
                             client.off('messageCreate', playMusicListener);
@@ -590,6 +601,7 @@ client.on("messageCreate", async message => {
 
                             client.off('messageCreate', playMusicListener);
                             client.off('messageCreate', musicListener);
+                            isPaused = false;
                             console.error('Error:', error);
                             throw error;
                         }
@@ -733,6 +745,8 @@ client.on("messageCreate", async message => {
 
     //Periodically check the current track (SpotifyFunction)
     setInterval(async () => {
+        if (isPaused === true) { return; }
+
         await spotifyApi.setAccessToken(newAccessToken);
         await checkCurrentTrack(newAccessToken)
             .then((song_and_artist) => {

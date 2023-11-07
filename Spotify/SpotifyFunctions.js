@@ -209,8 +209,23 @@ export async function returnNextTracks(ArtistName, AccessToken) {
                   spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
                   currentSongCount++;
                 }
-                return "Some other tracks by the same artist were added to your queue~~";
+                return true;
+              } else {
+                return false;
               }
+            })
+            //For some reason, the next song doesn't play once the queue is added. Add a play song command here:
+            .then((success) => {
+              if (success === true) {
+                spotifyApi.play()
+                  .then(() => {
+                    console.log("Song resumed successfully after adding to queue!");
+                    return true;
+                  })
+                  .catch((error) => {
+                    console.error("Error in getting playing the next song after adding to queue: "+error);
+                  });
+              } 
             })
             .catch((error) => {
               console.error("Couldn't get device data: "+error);
