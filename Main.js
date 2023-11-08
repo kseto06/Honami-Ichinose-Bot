@@ -58,7 +58,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, reviseTask,
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, getAlbum } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -483,7 +483,7 @@ client.on("messageCreate", async message => {
     if (content === '!music') {
         await message.channel.send("Make you authorize Spotify first or else these functions won't run!! Authorize using the command: !authorize");
         sleep(3000);
-        await message.channel.send("Please enter a function: !play, !cancel");
+        await message.channel.send("Please enter a function: !play, !cancel, !album");
         enableMusic = true;
         
         const musicListener = async (nestedMessage) => {
@@ -515,6 +515,8 @@ client.on("messageCreate", async message => {
                             } catch (error) {
                                 console.error("Error in trimming the song name and artist name (maybe due to a lack of two inputted variables): "+error);
                                 message.channel.send("Invalid input!!");
+                                client.off('messageCreate', playMusicListener);
+                                client.off('messageCreate', musicListener);
                                 return null;
                             }
 
@@ -608,6 +610,106 @@ client.on("messageCreate", async message => {
                     }
                     //Register playMusicListener
                     client.on('messageCreate', playMusicListener);
+                } else if (nestedMessage === '!album') {
+                    await message.channel.send("Alright, enter the name of the album you want to play?? :thinking:");
+                    sleep(1000);
+
+                    const playAlbumListener = async (input) => {
+                        if (input.author.bot) { return; }
+
+                        await message.channel.send("Alrighty, give me a moment...")
+
+                        try {
+                            //Clear queue in preparation to add album tracks
+                            await clearQueue(newAccessToken)
+                                .then(() => {
+                                    console.log("Queue cleared successfully (!album command)");
+                                })
+                                .catch((error) => {
+                                    console.error("Error in clearing the queue: "+error)
+                                });
+
+                            await getAlbum(newAccessToken, input)
+                                //Returns the list of songs in the album
+                                .then((list) => {
+                                    console.log(list);
+                                    const length = list.length;
+                                    
+                                    //Play the first song, then add the rest of the songs to the queue
+                                    isPaused = true;
+                                    playSong(list[0].name, list[0].artists, newAccessToken)
+                                        .then((success) => {
+                                            if (success === true) {
+                                                message.channel.send("Playing the first song in your chosen album <3");
+                                                return true;
+                                            } else if (success === null) {
+                                                message.channel.send("I couldn't get the list of the songs in the album :(");
+                                                client.off('messageCreate', playAlbumListener);
+                                                client.off('messageCreate', musicListener);
+                                                isPaused = false;
+                                                return null;
+                                            } else {
+                                                message.channel.send("I wasn't able to make a request to the servers to get your album :(");
+                                                client.off('messageCreate', playAlbumListener);
+                                                client.off('messageCreate', musicListener);
+                                                isPaused = false;
+                                                return false;
+                                            }
+                                        })
+                                        //Once song is successfully played and device ID retrieved, add the rest to queue:
+                                        .then((success) => {
+                                            if (success === true) {
+                                                try {
+                                                    spotifyApi.setAccessToken(newAccessToken);
+                                                    for (let i = 1; i < length; i++) {
+                                                        try {
+                                                            const trackURI = list[i].uri;
+                                                            console.log(`Song number ${i}'s URI: ${trackURI}`);
+                                                            spotifyApi.addToQueue({ uris: [trackURI] });
+                                                            console.log(`Song number ${i} added to the queue...`);
+                                                        } catch (error) {
+                                                            console.error("Error in adding to queue (possibly due to required parameter URI missing): "+error);
+                                                            message.channel.send("I couldn't add the album song data to the queue :(")
+                                                            client.off('messageCreate', playAlbumListener);
+                                                            client.off('messageCreate', musicListener);
+                                                            return;
+                                                        }
+                                                    }
+                                                } catch (error) {                                                
+                                                    console.error("Error in adding song data to the queue: "+error);
+                                                    message.channel.send("I couldn't add the album song data to the queue :(")
+                                                    client.off('messageCreate', playAlbumListener);
+                                                    client.off('messageCreate', musicListener);
+                                                    return null;
+                                                }
+
+                                                message.channel.send('Album tracks successfully added to the queue <3');
+                                                client.off('messageCreate', playAlbumListener);
+                                                client.off('messageCreate', musicListener);
+                                                return true;
+                                            } 
+                                        })
+                                        .catch((error) => {
+                                            message.channel.send("I couldn't play the song in your album!! :(");
+                                            client.off('messageCreate', playAlbumListener);
+                                            client.off('messageCreate', musicListener);
+                                            console.error("Error in playing the song (!album command): "+error);
+                                            return false;
+                                        });                                    
+                                })
+                                .catch((error) => {
+                                    message.channel.send("I couldn't get your chosen album data :(");
+                                    console.error("Error in fetching the album data: "+error);
+                                    client.off('messageCreate', playAlbumListener);
+                                    client.off('messageCreate', musicListener);
+                                    return null;
+                                });
+                        } catch (error) {
+                            console.error("Error in activating the play album listener: "+error);
+                        }
+                    }
+                    //Register back the playAlbumListener
+                    client.on('messageCreate', playAlbumListener);
                 } else {
                     console.log("Functionality doesn't exist");
                 }                          

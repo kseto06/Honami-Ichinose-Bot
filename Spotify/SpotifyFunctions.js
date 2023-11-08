@@ -13,8 +13,6 @@ const PORT = 8080;
 
 //Init config.json for id and secret
 import fs from 'fs';
-import { request } from 'http';
-import { error } from 'console';
 const config = JSON.parse(fs.readFileSync('config.json', 'utf-8'));
 
 const clientId = config.spotify_clientid; // Replace with your Spotify client ID
@@ -272,7 +270,7 @@ export async function getPlaylist(PlaylistName, AccessToken) {
 }
 
 //Called to clear the queue and to get new artist's tracks
-async function clearQueue(AccessToken) {
+export async function clearQueue(AccessToken) {
   spotifyApi.setAccessToken(AccessToken);
 
   try {
@@ -461,12 +459,12 @@ async function getQueue(AccessToken) {
   });
 }
 
-async function getAlbum(AccessToken, AlbumName) {
+export async function getAlbum(AccessToken, AlbumName) {
   return new Promise((resolve, reject) => { 
     const searchEndpoint = 'https://api.spotify.com/v1/search';
 
     const searchParameters = new URLSearchParams ({
-      q: `album${AlbumName}`,
+      q: `album ${AlbumName}`,
       type: 'album',
     });
 
@@ -507,6 +505,7 @@ async function getAlbum(AccessToken, AlbumName) {
       })
       //Use returned Album ID to get the request the album from the API:
       .then((returnedID) => {
+        console.log("Returned album ID: "+returnedID);
         const albumEndpoint = `https://api.spotify.com/v1/albums`;
 
         const headers = {
@@ -518,12 +517,14 @@ async function getAlbum(AccessToken, AlbumName) {
           headers: headers, 
         };
         
+        //Construct the finalized album URL endpoint
         const albumURL = `${albumEndpoint}/${returnedID}`;
 
-        fetch(albumURL, requestOptions)
+        return fetch(albumURL, requestOptions)
           .then((response) => {
             try {
               if (response.ok) {
+                console.log("Response is ok!");
                 return response.json();
               }
             } catch (error) {
@@ -534,19 +535,21 @@ async function getAlbum(AccessToken, AlbumName) {
           .catch((error) => {
             console.error("Error in fetching the albumURL data: "+error);
           })
-        });
-      })
+      })      
       //Use the response to return the ArrayList of songs in the album
       .then((data) => {
         const tracks = data.tracks.items;
         const trackCount = data.tracks.total;
+        console.log("Track count: "+trackCount);
         const songList = [];
 
+        //Iterate through each track and store their info into an arrayu
         for (let i = 0; i < trackCount; i++) {
           const trackInfo = {
-            name: tracks[i],
-            artists: tracks.artists.map(artist => artist.name), 
-            duration_ms: tracks.duration_ms,
+            name: tracks[i].name, 
+            artists: tracks[i].artists[0].name, //First instance of artists
+            duration_ms: tracks[i].duration_ms,
+            uri: tracks[i].uri,
           };
           songList.push(trackInfo);
         }
@@ -556,6 +559,7 @@ async function getAlbum(AccessToken, AlbumName) {
         console.error("Error in fetching album response: "+error);
         reject(null);
       });
+    });
 }
 
 //TEST: --IT WORKS 
