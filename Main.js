@@ -58,7 +58,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, reviseTask,
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, getAlbum } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -659,20 +659,36 @@ client.on("messageCreate", async message => {
                                         //Once song is successfully played and device ID retrieved, add the rest to queue:
                                         .then((success) => {
                                             if (success === true) {
-                                                try {
-                                                    spotifyApi.setAccessToken(newAccessToken);
+                                                try {                                                    
                                                     for (let i = 1; i < length; i++) {
                                                         try {
                                                             const trackURI = list[i].uri;
                                                             console.log(`Song number ${i}'s URI: ${trackURI}`);
-                                                            spotifyApi.addToQueue({ uris: [trackURI] });
-                                                            console.log(`Song number ${i} added to the queue...`);
+                                                            addToQueue(trackURI, newAccessToken) //try requesting add to queue myself with spotifyApi??
+                                                                .then((result) => {
+                                                                    if (result === true) {
+                                                                        console.log(`Song number ${i} added to queue successfully!`);
+                                                                    } else {
+                                                                        console.log(`Add URI to queue unsuccessful for song number ${i}`);
+                                                                        client.off('messageCreate', playAlbumListener);
+                                                                        client.off('messageCreate', musicListener);
+                                                                        return true;
+                                                                    }
+                                                                })
+                                                                //Here might be where the URI error occurs:
+                                                                .catch((error) => {
+                                                                    message.channel.send(`I couldn't add ${list[i].name} from your chosen album to the queue! :(`);
+                                                                    console.error(`Error in adding song number ${i} to queue: ${error}`);
+                                                                    client.off('messageCreate', playAlbumListener);
+                                                                    client.off('messageCreate', musicListener);
+                                                                    return null;
+                                                                });
                                                         } catch (error) {
                                                             console.error("Error in adding to queue (possibly due to required parameter URI missing): "+error);
                                                             message.channel.send("I couldn't add the album song data to the queue :(")
                                                             client.off('messageCreate', playAlbumListener);
                                                             client.off('messageCreate', musicListener);
-                                                            return;
+                                                            return null;
                                                         }
                                                     }
                                                 } catch (error) {                                                
@@ -688,6 +704,13 @@ client.on("messageCreate", async message => {
                                                 client.off('messageCreate', musicListener);
                                                 return true;
                                             } 
+                                        })
+                                        //Unpause interval function
+                                        .then((success) => {   
+                                            if (success === true) {
+                                                isPaused = false;
+                                                return;
+                                            }
                                         })
                                         .catch((error) => {
                                             message.channel.send("I couldn't play the song in your album!! :(");
@@ -787,6 +810,7 @@ client.on("messageCreate", async message => {
             });
     } else if (content === '!volume') {
         await message.channel.send('What % volume do you want to adjust the song to?? :thinking:');
+        await message.channel.send('Note that this command only works on computer devices, and not on mobile devices~~ :sob:');
         sleep(1000);
         volumeBoolean = true;
 

@@ -387,6 +387,7 @@ export async function setVolume(AccessToken, volumeValue) {
         }
       })
       .then((data) => {
+        if (data === undefined) { data = true; }
         console.log('Volume changed successfully: '+data);
         resolve(true);
       })
@@ -394,6 +395,56 @@ export async function setVolume(AccessToken, volumeValue) {
         console.error('Error changing volume: '+error);
         reject(false);
       });
+  });
+}
+
+export async function addToQueue(uri, AccessToken) {
+  return new Promise((resolve, reject) => {
+    /*
+    curl --request POST \
+  --url `https://api.spotify.com/v1/me/player/queue?uri=spotify%3Atrack%3A${uri}` \
+  --header 'Authorization: Bearer 1POdFZRZbvb...qqillRxMr2z'
+    */
+   const endpoint = `https://api.spotify.com/v1/me/player/queue?uri=${uri}`;
+
+   const headers = {
+    'Authorization': `Bearer ${AccessToken}`,
+   }
+
+   const requestOptions = {
+    method: 'POST',
+    headers: headers,
+   }
+
+   fetch(endpoint, requestOptions)
+    .then((response) => {
+      try {
+
+        if (response.status === 204) {
+          // 204 status indicates success with no content
+          console.log('Track added to queue successfully');
+          resolve(true);
+          return;
+        } else if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error('Error getting the response: '+response.statusText);
+        }
+
+      } catch (error) {
+        console.error("Error in fetching the response to add to queue: "+error);
+        reject(null);
+      }
+    })
+    .then((data) => {
+      if (data === undefined) { data = true; }
+      console.log("Song added successfully: "+data);
+      resolve(true);
+    })
+    .catch((error) => {
+      console.error("Error in using fetch (addToQueue): "+error);
+      reject(null);
+    })
   });
 }
 
