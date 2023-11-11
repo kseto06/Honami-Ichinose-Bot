@@ -968,11 +968,11 @@ client.on("messageCreate", async message => {
 
             //Set the current access token to the refreshed access token, so it can be used in the other functions:
             newAccessToken = refreshedAccessToken;
-            console.log("Refreshed access token after 55 min interval: "+newAccessToken);
+            console.log("Refreshed access token after 30 min interval: "+newAccessToken);
             return true;
 
         } catch (error) {
-            console.error("Error in refreshing after 55 mins: "+error);
+            console.error("Error in refreshing after 30 mins: "+error);
             return null;
         }
     }, 1800000);
