@@ -58,6 +58,7 @@ export const sadWords = [
     "i hate myself",
     "i hate every",
     "my dad left me",
+    "help me",
 ];
 
 export const encouragements = [

@@ -12,15 +12,13 @@ import { createInterface } from 'readline';
 //FUNCTIONS:
 export async function calculator(message) {
     return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            try {
-               var calculation = Math.evaluate(String(message));
-               resolve("Here's your answer! I got: "+calculation);
-            } catch {
-                console.log("Invalid Expression");
-                reject("Hmmm... I couldn't do it! Quite the challenge you got there... :(");
-            }
-        }, 3000); //She needs to think. She's human.
+        try {
+            var calculation = Math.evaluate(String(message));
+            resolve(calculation);
+        } catch {
+            console.log("Invalid Expression");
+            reject(false);
+        }
     });
 }
 

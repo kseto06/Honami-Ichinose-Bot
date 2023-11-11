@@ -135,6 +135,7 @@ client.on("messageCreate", async message => {
         
         //Nested messageCreate for calculation:
         const calculatorListener = async (nestedMessage) => {
+            if (nestedMessage.author.bot) { return; }
 
             nestedMessage = nestedMessage.content.toLowerCase();
             
@@ -144,18 +145,28 @@ client.on("messageCreate", async message => {
                 if (nestedMessage === '!cancel') {
                     await message.channel.send("Ok then, no more math for now~~");
                     client.off('messageCreate', calculatorListener);
+                    return;
                 } else {    
                     calculator(nestedMessage)
                         .then((result) => {
-                            message.channel.send(result);
-                            enableCalculator = false;
-                            client.off('messageCreate', calculatorListener);
+                            if (result) {
+                                message.channel.send("Here's your answer! I got: "+result);
+                                enableCalculator = false;
+                                client.off('messageCreate', calculatorListener);
+                                return true;
+                            } else {
+                                message.channel.send("Your input is invalid!!");
+                                enableCalculator = false;
+                                client.off('messageCreate', calculatorListener);
+                                return false;
+                            }
                         })
                         .catch((error) => {
                             message.channel.send("Hmmm... I couldn't do it! Quite the challenge you got there... :(");
                             enableCalculator = false;
                             client.off('messageCreate', calculatorListener);
                             console.error(error);
+                            return null;
                         });
                 }
             }
@@ -890,7 +901,7 @@ client.on("messageCreate", async message => {
 
     //Periodically check the current track (SpotifyFunction)
     setInterval(async () => {
-        if (isPaused) { return; }
+        if (isPaused || newAccessToken === null) { return; }
 
         await spotifyApi.setAccessToken(newAccessToken);
         await checkCurrentTrack(newAccessToken)
