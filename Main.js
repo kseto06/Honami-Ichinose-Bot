@@ -897,8 +897,23 @@ client.on("messageCreate", async message => {
             .then((song_and_artist) => {
                 //[0] contains song, [1] contains artist
                 if (song_and_artist === null) { return; }
-                //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`); 
-                message.channel.send('**Now Playing: **');
+                //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`);
+                try { 
+                    message.channel.send('**Now Playing: **');
+                } catch (error) {
+                    console.error("Error in sending the message: "+error);
+                    if (String(error).includes("expired")) {
+                        requestRefresh(newRefreshToken, String(error))
+                            .then((refreshedAccessToken) => {
+                                newAccessToken = refreshedAccessToken;
+                                return true;
+                            })
+                            .catch((error) => {
+                                console.error("Error in refreshing the access token: "+error);
+                                return false;
+                            });
+                    }
+                }
 
                 try {
                     getTrackURL(song_and_artist[0], song_and_artist[1], newAccessToken)
@@ -915,11 +930,10 @@ client.on("messageCreate", async message => {
 
                             const trackEmbed = new EmbedBuilder()
                                 .setColor('#FFB6C1')
-                                .setTitle(`${song_and_artist[0]}`)
-                                .setURL(url.trackURL)
+                                .setTitle(`${song_and_artist[0]}`).setURL(url.trackURL)
                                 .setAuthor({ name: 'Honami Ichinose Music <3', iconURL: 'https://preview.redd.it/ichinose-honami-ln-vs-anime-v0-s5xfqflkdp1b1.jpg?width=737&format=pjpg&auto=webp&s=da85c830b193d8a6a85144fb3b797973f3902167', url: 'https://developer.spotify.com/dashboard/df4cfadf6d7f404f8d3ae5920ed8b75e' })
-                                .setDescription(`By: [${song_and_artist[1]}](${url.artistURL})`)
-                                .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' }).setURL('https://open.spotify.com/')
+                                .setDescription(`By: [${song_and_artist[1]}](${url.artistURL}) on [${url.albumName}](${url.albumURL})`)
+                                .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' })
                                 .setThumbnail(url.imageURL);
                             //Send the embed as a message:
                             message.channel.send({ embeds: [trackEmbed] });
@@ -943,6 +957,25 @@ client.on("messageCreate", async message => {
                 return null; //return null to simulate failure      
             });
     }, 7000);
+
+    /*
+    * Request a refresh every 30 minutes, since the access token will expire every hour
+    * Ensures that we try to refresh at least twice so that we increase the chances of successful requests
+    */
+    setInterval(async () => {
+        try {
+            const refreshedAccessToken = await requestRefresh(newRefreshToken, "the access token expired");
+
+            //Set the current access token to the refreshed access token, so it can be used in the other functions:
+            newAccessToken = refreshedAccessToken;
+            console.log("Refreshed access token after 55 min interval: "+newAccessToken);
+            return true;
+
+        } catch (error) {
+            console.error("Error in refreshing after 55 mins: "+error);
+            return null;
+        }
+    }, 3300000);
 });
 
 client.login(config.token);

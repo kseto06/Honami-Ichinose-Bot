@@ -679,10 +679,12 @@ export async function getTrackURL(trackName, artistName, accessToken) {
               const trackURL = data.external_urls.spotify;
               const imageURL = data.album.images[0].url;
               const artistURL = data.artists[0].external_urls.spotify;
+              const albumURL = data.album.external_urls.spotify;
+              const albumName = data.album.name;
               console.log("Returned Spotify URL: "+data.external_urls.spotify);
               console.log("Returned track image object: "+data.album.images[0].url);
               console.log("Returned track album: "+data.album.name);
-              resolve({ trackURL, imageURL, artistURL });
+              resolve({ trackURL, imageURL, artistURL, albumURL, albumName });
             }
           })
           .catch((error) => {
