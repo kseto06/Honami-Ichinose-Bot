@@ -975,7 +975,7 @@ client.on("messageCreate", async message => {
             console.error("Error in refreshing after 55 mins: "+error);
             return null;
         }
-    }, 3300000);
+    }, 1800000);
 });
 
 client.login(config.token);
