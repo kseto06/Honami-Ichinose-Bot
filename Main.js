@@ -908,25 +908,9 @@ client.on("messageCreate", async message => {
             .then((song_and_artist) => {
                 //[0] contains song, [1] contains artist
                 if (song_and_artist === null) { return; }
-                //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`);
-                try { 
-                    message.channel.send('**Now Playing: **');
-                } catch (error) {
-                    console.error("Error in sending the message: "+error);
-                    if (String(error).includes("expired")) {
-                        requestRefresh(newRefreshToken, String(error))
-                            .then((refreshedAccessToken) => {
-                                newAccessToken = refreshedAccessToken;
-                                return true;
-                            })
-                            .catch((error) => {
-                                console.error("Error in refreshing the access token: "+error);
-                                return false;
-                            });
-                    }
-                }
 
                 try {
+
                     getTrackURL(song_and_artist[0], song_and_artist[1], newAccessToken)
                         .then((url) => {
                             if (url) {
@@ -936,8 +920,26 @@ client.on("messageCreate", async message => {
                             }
                         })
                         .then((url) => {
-                            if (url === false) { return; }
+                            if (url === false || url === null || url === undefined) { return; }
                             console.log(url);
+
+                            //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`);
+                            try { 
+                                message.channel.send('**Now Playing: **');
+                            } catch (error) {
+                                console.error("Error in sending the message: "+error);
+                                if (String(error).includes("expired")) {
+                                    requestRefresh(newRefreshToken, String(error))
+                                        .then((refreshedAccessToken) => {
+                                            newAccessToken = refreshedAccessToken;
+                                            return true;
+                                        })
+                                        .catch((error) => {
+                                            console.error("Error in refreshing the access token: "+error);
+                                            return false;
+                                        });
+                                }
+                            }
 
                             const trackEmbed = new EmbedBuilder()
                                 .setColor('#FFB6C1')
