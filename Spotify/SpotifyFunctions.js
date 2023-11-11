@@ -611,15 +611,15 @@ export async function getAlbum(AccessToken, AlbumName) {
     });
 }
 
-export async function getTrackURL(trackName, accessToken) {
-  console.log(`Track Name: ${trackName}`);
+export async function getTrackURL(trackName, artistName, accessToken) {
+  console.log(`Track Name: ${trackName} and Artist Name: ${artistName}`);
   return new Promise((resolve, reject) => {
     //Request a search to get the track id:
     const searchEndpoint = 'https://api.spotify.com/v1/search';
 
     const searchParameters = new URLSearchParams ({
-      q: `track ${trackName}`,
-      type: 'track',
+      q: `track ${trackName} artist ${artistName}`,
+      type: 'track,artist',
     });
 
     const headers = {
@@ -681,6 +681,7 @@ export async function getTrackURL(trackName, accessToken) {
               const artistURL = data.artists[0].external_urls.spotify;
               console.log("Returned Spotify URL: "+data.external_urls.spotify);
               console.log("Returned track image object: "+data.album.images[0].url);
+              console.log("Returned track album: "+data.album.name);
               resolve({ trackURL, imageURL, artistURL });
             }
           })

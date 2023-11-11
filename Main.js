@@ -901,7 +901,7 @@ client.on("messageCreate", async message => {
                 message.channel.send('**Now Playing: **');
 
                 try {
-                    getTrackURL(song_and_artist[0], newAccessToken)
+                    getTrackURL(song_and_artist[0], song_and_artist[1], newAccessToken)
                         .then((url) => {
                             if (url) {
                                 return url;
