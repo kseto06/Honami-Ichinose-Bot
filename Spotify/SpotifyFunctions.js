@@ -400,11 +400,7 @@ export async function setVolume(AccessToken, volumeValue) {
 
 export async function addToQueue(uri, AccessToken) {
   return new Promise((resolve, reject) => {
-    /*
-    curl --request POST \
-  --url `https://api.spotify.com/v1/me/player/queue?uri=spotify%3Atrack%3A${uri}` \
-  --header 'Authorization: Bearer 1POdFZRZbvb...qqillRxMr2z'
-    */
+   //Define API endpoints, headers, research
    const endpoint = `https://api.spotify.com/v1/me/player/queue?uri=${uri}`;
 
    const headers = {
@@ -417,6 +413,7 @@ export async function addToQueue(uri, AccessToken) {
    }
 
    fetch(endpoint, requestOptions)
+    //Fetch a response and resolve if possible, throw errors here
     .then((response) => {
       try {
 
@@ -436,6 +433,7 @@ export async function addToQueue(uri, AccessToken) {
         reject(null);
       }
     })
+    //Check the response and resolve
     .then((data) => {
       if (data === undefined) { data = true; }
       console.log("Song added successfully: "+data);
@@ -611,6 +609,89 @@ export async function getAlbum(AccessToken, AlbumName) {
         reject(null);
       });
     });
+}
+
+export async function getTrackURL(trackName, accessToken) {
+  console.log(`Track Name: ${trackName}`);
+  return new Promise((resolve, reject) => {
+    //Request a search to get the track id:
+    const searchEndpoint = 'https://api.spotify.com/v1/search';
+
+    const searchParameters = new URLSearchParams ({
+      q: `track ${trackName}`,
+      type: 'track',
+    });
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    const url = `${searchEndpoint}?${searchParameters.toString()}`;
+
+    fetch(url, { headers: headers, })
+      .then((response) => {
+        try {
+          if (response.ok) {
+            return response.json();
+          } else {
+            console.log("Unable to return the JSON track response");
+            reject(null);
+          }
+        } catch (error) {
+          console.error("Error in getting the JSON track data: "+error);
+          reject(null);
+        }
+      })
+      //Use returned data to get the best matching possible track
+      .then((data) => {
+        if (data) {
+          console.log(data);
+          console.log('Most probable track id: '+data.tracks.items[0].id);
+          return data.tracks.items[0].id;
+        }
+      })
+      //Use the track id to request Get Track and get the external_urls
+      .then((id) => {
+        const trackEndpoint = 'https://api.spotify.com/v1/tracks';
+
+        const headers = {
+          Authorization: `Bearer ${accessToken}`,
+        };
+
+        const url = `${trackEndpoint}/${id}`;
+
+        fetch(url, { headers: headers, })
+          .then((response) => {
+            try {
+              if (response.ok) {
+                return response.json();
+              } else {
+                console.log("Unable to return the JSON id response: "+response.statusText);
+                return;
+              }
+            } catch (error) {
+              console.error("Error in getting the JSON id data: "+error);
+              reject(null);
+            }
+          })
+          .then((data) => {
+            if (data) {
+              const trackURL = data.external_urls.spotify;
+              const imageURL = data.album.images[0].url;
+              const artistURL = data.artists[0].external_urls.spotify;
+              console.log("Returned Spotify URL: "+data.external_urls.spotify);
+              console.log("Returned track image object: "+data.album.images[0].url);
+              resolve({ trackURL, imageURL, artistURL });
+            }
+          })
+          .catch((error) => {
+            console.error("Error in fetching response (id chain): "+error);
+          })
+        })
+        .catch((error) => {
+          console.error("Error in fetching the overall track response: "+error);
+        });
+  });
 }
 
 //TEST: --IT WORKS 

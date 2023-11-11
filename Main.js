@@ -58,7 +58,7 @@ import { calculator, randomizeArray, addTask, viewTask, resolveTask, reviseTask,
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum, getTrackURL } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -222,6 +222,7 @@ client.on("messageCreate", async message => {
                     needToAdd = true;
 
                     const newTask = async (addNewTask, addNewSubject, addNewDueDate) => {
+                        if (addNewTask.author.bot) { return; }
 
                         if (needToAdd === true) {
                             //Assign above values to the newTask
@@ -256,6 +257,8 @@ client.on("messageCreate", async message => {
                     needToResolve = true;
 
                     const removeTask = async (taskName) => {
+                        if (taskName.author.bot) { return; }
+
                         console.log("taskName: "+taskName)
                         if (needToResolve === true) {
                             resolveTask(taskName)
@@ -504,7 +507,7 @@ client.on("messageCreate", async message => {
                     await message.channel.send("In the format of: 'Song Name', 'Artist Name'");
 
                     const playMusicListener = async (input) => {
-                        if (input.author.bot) { return; }
+                        if (input.author.bot || input === '!cancel') { return; }
 
                         console.log("Attempt to log access token from global declare: "+newAccessToken);
                         try {
@@ -615,11 +618,12 @@ client.on("messageCreate", async message => {
                     sleep(1000);
 
                     const playAlbumListener = async (input) => {
-                        if (input.author.bot) { return; }
+                        if (input.author.bot || input === '!cancel') { return; }
 
                         await message.channel.send("Alrighty, give me a moment...")
 
                         try {
+                            isPaused = true;
                             //Clear queue in preparation to add album tracks
                             await clearQueue(newAccessToken)
                                 .then(() => {
@@ -636,7 +640,6 @@ client.on("messageCreate", async message => {
                                     const length = list.length;
                                     
                                     //Play the first song, then add the rest of the songs to the queue
-                                    isPaused = true;
                                     playSong(list[0].name, list[0].artists, newAccessToken)
                                         .then((success) => {
                                             if (success === true) {
@@ -729,6 +732,10 @@ client.on("messageCreate", async message => {
                                 });
                         } catch (error) {
                             console.error("Error in activating the play album listener: "+error);
+                            isPaused = false;
+                            client.off('messageCreate', playAlbumListener);
+                            client.off('messageCreate', musicListener);
+                            return null;
                         }
                     }
                     //Register back the playAlbumListener
@@ -862,6 +869,18 @@ client.on("messageCreate", async message => {
         } else {
             return;
         }
+    } else if (content === '!clear queue') {
+        await message.channel.send("Alright, give me a second...");
+        await clearQueue(newAccessToken)
+            .then(() => {
+                message.channel.send("Queue cleared successfully!");
+                return;
+            })
+            .catch((error) => {
+                message.channel.send("I was unable to clear your queue :(");
+                console.error("Error in clearing the queue (!clear queue cmd): "+error);
+                return;
+            });
     }
 
     //Build Clash Royale Deck
@@ -871,16 +890,50 @@ client.on("messageCreate", async message => {
 
     //Periodically check the current track (SpotifyFunction)
     setInterval(async () => {
-        if (isPaused === true) { return; }
+        if (isPaused) { return; }
 
         await spotifyApi.setAccessToken(newAccessToken);
         await checkCurrentTrack(newAccessToken)
             .then((song_and_artist) => {
                 //[0] contains song, [1] contains artist
                 if (song_and_artist === null) { return; }
-                message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`); 
+                //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`); 
+                message.channel.send('**Now Playing: **');
+
+                try {
+                    getTrackURL(song_and_artist[0], newAccessToken)
+                        .then((url) => {
+                            if (url) {
+                                return url;
+                            } else {
+                                return false;
+                            }
+                        })
+                        .then((url) => {
+                            if (url === false) { return; }
+                            console.log(url);
+
+                            const trackEmbed = new EmbedBuilder()
+                                .setColor('#FFB6C1')
+                                .setTitle(`${song_and_artist[0]}`)
+                                .setURL(url.trackURL)
+                                .setAuthor({ name: 'Honami Ichinose Music <3', iconURL: 'https://preview.redd.it/ichinose-honami-ln-vs-anime-v0-s5xfqflkdp1b1.jpg?width=737&format=pjpg&auto=webp&s=da85c830b193d8a6a85144fb3b797973f3902167', url: 'https://developer.spotify.com/dashboard/df4cfadf6d7f404f8d3ae5920ed8b75e' })
+                                .setDescription(`By: [${song_and_artist[1]}](${url.artistURL})`)
+                                .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' }).setURL('https://open.spotify.com/')
+                                .setThumbnail(url.imageURL);
+                            //Send the embed as a message:
+                            message.channel.send({ embeds: [trackEmbed] });
+                        })
+                        .catch((error) => {
+                            console.error("Error in retrieving the resolved URL: "+error);
+                            return;
+                        })
+                } catch (error) {
+                    console.error("Error in embedding the URL: "+error);
+                }
+
                 return true; //return true to simulate success
-            })        
+            })      
             .catch((error) => {     
                 if (String(error).includes('expired') && String(newRefreshToken !== null)) {
                     requestRefresh(newRefreshToken, error);
