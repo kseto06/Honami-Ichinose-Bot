@@ -479,6 +479,10 @@ client.on("messageCreate", async message => {
 
         try {
             const refreshedAccessToken = await requestRefresh(newRefreshToken, "the access token expired");
+            if (refreshedAccessToken === null) {
+                message.channel.send("I wasn't able to refresh your access token!! :(");
+                return null;
+            }
 
             //Set the current access token to the refreshed access token, so it can be used in the other functions:
             newAccessToken = refreshedAccessToken;
@@ -519,6 +523,7 @@ client.on("messageCreate", async message => {
 
                     const playMusicListener = async (input) => {
                         if (input.author.bot || input === '!cancel') { return; }
+                        await message.channel.send("Alrighty, give me a moment...");
 
                         console.log("Attempt to log access token from global declare: "+newAccessToken);
                         try {
@@ -924,8 +929,23 @@ client.on("messageCreate", async message => {
                             console.log(url);
 
                             //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`);
+
+                            const trackEmbed = new EmbedBuilder()
+                                .setColor('#FFB6C1')
+                                .setTitle(`${song_and_artist[0]}`).setURL(url.trackURL)
+                                .setAuthor({ name: 'Honami Ichinose Music <3', iconURL: 'https://preview.redd.it/ichinose-honami-ln-vs-anime-v0-s5xfqflkdp1b1.jpg?width=737&format=pjpg&auto=webp&s=da85c830b193d8a6a85144fb3b797973f3902167', url: 'https://developer.spotify.com/dashboard/df4cfadf6d7f404f8d3ae5920ed8b75e' })
+                                .setDescription(`By: [${song_and_artist[1]}](${url.artistURL}) on [${url.albumName}](${url.albumURL})`)
+                                .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' })
+                                .setThumbnail(url.imageURL);
+                            
                             try { 
-                                message.channel.send('**Now Playing: **');
+                                if (trackEmbed) {
+                                    message.channel.send('**Now Playing: **');
+                                    //Send the embed as a message:
+                                    message.channel.send({ embeds: [trackEmbed] });
+                                } else {
+                                    return false;
+                                }
                             } catch (error) {
                                 console.error("Error in sending the message: "+error);
                                 if (String(error).includes("expired")) {
@@ -936,24 +956,16 @@ client.on("messageCreate", async message => {
                                         })
                                         .catch((error) => {
                                             console.error("Error in refreshing the access token: "+error);
-                                            return false;
+                                            return null;
                                         });
+                                } else {
+                                    return;
                                 }
                             }
-
-                            const trackEmbed = new EmbedBuilder()
-                                .setColor('#FFB6C1')
-                                .setTitle(`${song_and_artist[0]}`).setURL(url.trackURL)
-                                .setAuthor({ name: 'Honami Ichinose Music <3', iconURL: 'https://preview.redd.it/ichinose-honami-ln-vs-anime-v0-s5xfqflkdp1b1.jpg?width=737&format=pjpg&auto=webp&s=da85c830b193d8a6a85144fb3b797973f3902167', url: 'https://developer.spotify.com/dashboard/df4cfadf6d7f404f8d3ae5920ed8b75e' })
-                                .setDescription(`By: [${song_and_artist[1]}](${url.artistURL}) on [${url.albumName}](${url.albumURL})`)
-                                .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' })
-                                .setThumbnail(url.imageURL);
-                            //Send the embed as a message:
-                            message.channel.send({ embeds: [trackEmbed] });
                         })
                         .catch((error) => {
                             console.error("Error in retrieving the resolved URL: "+error);
-                            return;
+                            return null;
                         })
                 } catch (error) {
                     console.error("Error in embedding the URL: "+error);
