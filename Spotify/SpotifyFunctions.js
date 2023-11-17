@@ -28,9 +28,6 @@ const spotifyApi = new SpotifyWebApi({
 // In-memory storage for code_verifiers 
 const codeVerifiers = new Map();
 
-// Global variables:
-var currentSongCount = 0;
-
 // Helper function to generate a random string
 function generateRandomString(length) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -173,67 +170,159 @@ export async function playSong(songName, artistName, accessToken) {
   }
 }
 
+export async function playArtist(ArtistName, AccessToken) {
+  return new Promise((resolve, reject) => {
+    const searchEndpoint = 'https://api.spotify.com/v1/search';
+
+    const searchParameters = new URLSearchParams ({
+      q: `artist ${ArtistName}`,
+      type: 'artist',
+    });
+
+    const headers = {
+      Authorization: `Bearer ${AccessToken}`,
+    };
+
+    const url = `${searchEndpoint}?${searchParameters.toString()}`;
+
+    fetch(url, { headers: headers, })
+      .then((response) => {
+        try {
+          if (response.ok) {
+            return response.json();
+          }
+        } catch (error) {
+          console.error("Error in getting the JSON queue data: "+error);
+          reject(null);
+        }
+      })
+      //Get Album ID:
+      .then((data) => {
+        try {
+          const artists = data.artists.items;
+
+          if (artists.length > 0) {
+            const artistID = artists[0].id;
+            console.log("Fetched artistID: "+artistID);
+            return artistID;
+          } else {
+            console.error("Error in finding artist");
+            reject(false);            
+          }
+        } catch (error) {
+          console.error("Error in returning the artist data: "+error);
+          reject(null);
+        }
+      })
+      //Use returned Album ID to get the request the artist's top tracks from the API:
+      .then((returnedID) => {
+        console.log("Returned album ID: "+returnedID);
+        const artistEndpoint = `https://api.spotify.com/v1/artists`;
+
+        const headers = {
+          'Authorization': `Bearer ${AccessToken}`,
+        };
+    
+        const requestOptions = {
+          method: 'GET',
+          headers: headers, 
+        };
+        
+        //Construct the finalized album URL endpoint
+        const artistURL = `${artistEndpoint}/${returnedID}/top-tracks`;
+
+        return fetch(artistURL, requestOptions)
+          .then((response) => {
+            try {
+              if (response.ok) {
+                console.log("Response is ok!");
+                return response.json();
+              }
+            } catch (error) {
+              console.error("Error in getting the JSON queue data: "+error);
+              reject(null);
+            }
+          })
+          .catch((error) => {
+            console.error("Error in fetching the albumURL data: "+error);
+          })
+      })      
+      //Use the response to return the ArrayList of songs in the album
+      .then((data) => {
+        const tracks = data.tracks;
+        const songList = [];
+
+        //Iterate through each track and store their info into an array, use for-of since data does not give a total number of top tracks
+        for (const track of tracks) {
+          const trackInfo = {
+            name: track.name, 
+            artists: track.artists[0].name, //First instance of artists
+            duration_ms: track.duration_ms,
+            uri: track.uri,
+          };
+          songList.push(trackInfo);
+        }
+        resolve(songList);
+      })
+      .catch((error) => {
+        console.error("Error in fetching album response: "+error);
+        reject(null);
+      });
+  });
+}
+
 export async function returnNextTracks(ArtistName, AccessToken) {
   //console.log(AccessToken);
   await spotifyApi.setAccessToken(AccessToken);
-  
-  //Clear the queue (if possible):
-  await clearQueue(AccessToken)
-    .then(() => {
-      console.log("Queue cleared successfully!");
+
+  //Search for other tracks by the same artist:
+  await spotifyApi.searchTracks(`artist:${ArtistName}`)
+    .then((data) => {
+      console.log(`Search tracks by "${ArtistName}" in the artist name'` + data.body.tracks.items);
+
+        // Spotify Web API to get user's device
+        spotifyApi.getMyDevices()
+          .then((devicesData) => {
+            const devices = devicesData.body.devices;
+
+            if (devices.length > 0) {
+              const activeDeviceID = devices[0].id;
+              console.log('Active Device ID: ', activeDeviceID);
+              
+              //Add the rest of the artist's songs to the queue?
+              for (let i = 0; i < data.body.tracks.items.length; i++) {
+                const QueueURI = data.body.tracks.items[i].uri;
+                //console.log(QueueURI);
+                spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
+              }
+              return true;
+            } else {
+              return false;
+            }
+          })
+          //For some reason, the next song doesn't play once the queue is added. Add a play song command here:
+          .then((success) => {
+            if (success === true) {
+              spotifyApi.play()
+                .then(() => {
+                  console.log("Song resumed successfully after adding to queue!");
+                  return true;
+                })
+                .catch((error) => {
+                  //Error is caught here, in this .then() chain -- does this have to be deleted? But technically, the song does resume successfully after adding to queue
+                  console.error("Error in playing the next song after adding to queue: "+error);
+                });
+            } 
+          })
+          .catch((error) => {
+            console.error("Couldn't get device data: "+error);
+            return "Couldn't connect your device! :(";
+          });
     })
     .catch((error) => {
-      console.error("Error in clearing the queue (returnNextTracks): "+error);
+      console.error("Couldn't get artist's tracks: "+error);
+      return "Couldn't get artist's tracks! :(";
     });
-
-    //Search for other tracks by the same artist:
-    await spotifyApi.searchTracks(`artist:${ArtistName}`)
-      .then((data) => {
-        console.log(`Search tracks by "${ArtistName}" in the artist name'` + data.body.tracks.items);
-
-          // Spotify Web API to get user's device
-          spotifyApi.getMyDevices()
-            .then((devicesData) => {
-              const devices = devicesData.body.devices;
-
-              if (devices.length > 0) {
-                const activeDeviceID = devices[0].id;
-                console.log('Active Device ID: ', activeDeviceID);
-                
-                //Add the rest of the artist's songs to the queue?
-                for (let i = 0; i < data.body.tracks.items.length; i++) {
-                  const QueueURI = data.body.tracks.items[i].uri;
-                  //console.log(QueueURI);
-                  spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
-                  currentSongCount++;
-                }
-                return true;
-              } else {
-                return false;
-              }
-            })
-            //For some reason, the next song doesn't play once the queue is added. Add a play song command here:
-            .then((success) => {
-              if (success === true) {
-                spotifyApi.play()
-                  .then(() => {
-                    console.log("Song resumed successfully after adding to queue!");
-                    return true;
-                  })
-                  .catch((error) => {
-                    console.error("Error in getting playing the next song after adding to queue: "+error);
-                  });
-              } 
-            })
-            .catch((error) => {
-              console.error("Couldn't get device data: "+error);
-              return "Couldn't connect your device! :(";
-            });
-      })
-      .catch((error) => {
-        console.error("Couldn't get artist's tracks: "+error);
-        return "Couldn't get artist's tracks! :(";
-      });
 }
 
 export async function getPlaylist(PlaylistName, AccessToken) {
@@ -312,8 +401,6 @@ export async function checkCurrentTrack(AccessToken) {
         //Else: Get the track of the new song and print it, overwriting the last instance of storedSong with the currentSong.
         storedSong = currentSong.body.item.name;
         const artistName = currentSong.body.item.artists[0].name;
-        //Since there is a new track, we can reduce currentSongCount to gradually reset it:
-        currentSongCount--;
         return [currentSongName, artistName];
     } catch (error) {
       console.error('Error checking current track: '+error);
@@ -328,7 +415,7 @@ export async function requestRefresh(RefreshToken, error) {
 
     spotifyApi.refreshAccessToken()
       .then((data) => {
-        if (error.includes('the access token expired')) {
+        if (error.includes('expired')) {
           // Save the access token so that it's used in future calls
           const newAccessToken = data.body['access_token'];
           console.log("Access token has been refreshed: "+newAccessToken);
@@ -336,13 +423,17 @@ export async function requestRefresh(RefreshToken, error) {
           //Return the new access token, and set it equal to the global variable in Main.js
           resolve(String(newAccessToken));
         } else {
-          console.error("The access token hasn't expired yet");
-          reject(new Error('Unable to refresh the token'));
+          console.error(new Error('Unable to refresh the token: '));
+          reject(null);
         }
 
     })
     .catch((error) => {
       console.error("Error in refreshing the token: "+error);
+      if (String(error).includes("supplied")) {
+        reject(false);
+      }
+      reject(null);
     });
   });
 }

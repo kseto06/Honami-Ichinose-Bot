@@ -57,11 +57,13 @@ const table = new Table ({
 import { calculator, randomizeArray, addTask, viewTask, resolveTask, reviseTask, sleep, checkDueDate } from './Functions.js';
 import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js';
 import { Task } from './Task.js';
+import { Token } from  './Token.js';
 import { getTomorrowDate } from './Date.js';
 import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum, getTrackURL } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
+const Tokens = new Token();
 var isPaused = false;
 
 client.on('ready', () => {
@@ -463,6 +465,8 @@ client.on("messageCreate", async message => {
                 newRefreshToken = data.refreshToken;
                 console.log("Access Token: "+newAccessToken);
                 console.log("Refresh Token: "+newRefreshToken);
+                Tokens.setAccessToken(newAccessToken);
+                Tokens.setRefreshToken(newRefreshToken);
                 message.channel.send("Successfully authorized!! <3");
                 return true;
             })
@@ -478,7 +482,14 @@ client.on("messageCreate", async message => {
         await message.reply("Sure!! If your access token has expired, it is important to get a new one~~");
 
         try {
-            const refreshedAccessToken = await requestRefresh(newRefreshToken, "the access token expired");
+            const currentRefreshToken = Tokens.getRefreshToken();
+            const refreshedAccessToken = await requestRefresh(currentRefreshToken, "expired");
+
+            if (refreshedAccessToken === false) {
+                message.channel.send("You haven't authorized to get your access token yet >:(");
+                return null;
+            }
+
             if (refreshedAccessToken === null) {
                 message.channel.send("I wasn't able to refresh your access token!! :(");
                 return null;
@@ -486,6 +497,7 @@ client.on("messageCreate", async message => {
 
             //Set the current access token to the refreshed access token, so it can be used in the other functions:
             newAccessToken = refreshedAccessToken;
+            Tokens.setAccessToken(newAccessToken);
             console.log("Refreshed access token: "+newAccessToken);
             message.channel.send("Access token successfully refreshed!! <3");
             return true;
@@ -519,7 +531,9 @@ client.on("messageCreate", async message => {
 
                 } else if (nestedMessage === '!play') {
                     await message.channel.send("Alrighty, enter the name of the song and the name of the artist that you want to play!");
-                    await message.channel.send("In the format of: 'Song Name', 'Artist Name'");
+                    await message.channel.send("Enter in the format of: 'Song Name', 'Artist Name'");
+                    await message.channel.send("You can leave one of the fields blank. I can still try to find your song as long as you have one of the parameters filled out!");
+                    await message.channel.send("Just remember to add the comma so I can differentiate between a song and an artist <3");
 
                     const playMusicListener = async (input) => {
                         if (input.author.bot || input === '!cancel') { return; }
@@ -541,6 +555,20 @@ client.on("messageCreate", async message => {
 
                             try {
                                 isPaused = true;
+                                
+                                try {
+                                    //Clear the queue (if possible):
+                                    await clearQueue(Tokens.getAccessToken())
+                                    .then(() => {
+                                        console.log("Queue cleared successfully!");
+                                    })
+                                    .catch((error) => {
+                                        console.error("Error in clearing the queue (returnNextTracks): "+error);
+                                    });
+                                } catch (error) {
+                                    console.error("Error in clearing the queue (!play cmd): "+error)
+                                }
+
                                 playSong(String("'"+SongName+"'"), String("'"+ArtistName+"'"), newAccessToken)
                                     .then((success) => {
                                         //Send current song playing (only when it is actually playing):
@@ -590,6 +618,8 @@ client.on("messageCreate", async message => {
                                             message.channel.send("Couldn't find your device!");
                                         } else if (String(error).includes("No token provided")) {
                                             message.channel.send("You haven't authorized with Spotify yet!!")
+                                        } else if (String(error).includes("toUpperCase")) {
+                                            return;
                                         } else {
                                             message.channel.send("Couldn't play your chosen song!");
                                         }
@@ -683,7 +713,7 @@ client.on("messageCreate", async message => {
                                                         try {
                                                             const trackURI = list[i].uri;
                                                             console.log(`Song number ${i}'s URI: ${trackURI}`);
-                                                            addToQueue(trackURI, newAccessToken) //try requesting add to queue myself with spotifyApi??
+                                                            addToQueue(trackURI, newAccessToken)
                                                                 .then((result) => {
                                                                     if (result === true) {
                                                                         console.log(`Song number ${i} added to queue successfully!`);
@@ -918,10 +948,15 @@ client.on("messageCreate", async message => {
 
                     getTrackURL(song_and_artist[0], song_and_artist[1], newAccessToken)
                         .then((url) => {
-                            if (url) {
-                                return url;
-                            } else {
-                                return false;
+                            try {
+                                if (url) {
+                                    console.log('URL data returning successfully...')
+                                    return url;
+                                } else {
+                                    return false;
+                                }
+                            } catch (error) {
+                                console.log('Error in returning the URL data'+ error);
                             }
                         })
                         .then((url) => {
@@ -929,14 +964,19 @@ client.on("messageCreate", async message => {
                             console.log(url);
 
                             //message.channel.send(`Now playing: **${song_and_artist[0]}**, by **${song_and_artist[1]}**~~`);
+                            let trackEmbed;
 
-                            const trackEmbed = new EmbedBuilder()
-                                .setColor('#FFB6C1')
-                                .setTitle(`${song_and_artist[0]}`).setURL(url.trackURL)
-                                .setAuthor({ name: 'Honami Ichinose Music <3', iconURL: 'https://preview.redd.it/ichinose-honami-ln-vs-anime-v0-s5xfqflkdp1b1.jpg?width=737&format=pjpg&auto=webp&s=da85c830b193d8a6a85144fb3b797973f3902167', url: 'https://developer.spotify.com/dashboard/df4cfadf6d7f404f8d3ae5920ed8b75e' })
-                                .setDescription(`By: [${song_and_artist[1]}](${url.artistURL}) on [${url.albumName}](${url.albumURL})`)
-                                .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' })
-                                .setThumbnail(url.imageURL);
+                            try {
+                                trackEmbed = new EmbedBuilder()
+                                    .setColor('#FFB6C1')
+                                    .setTitle(`${song_and_artist[0]}`).setURL(url.trackURL)
+                                    .setAuthor({ name: 'Honami Ichinose Music <3', iconURL: 'https://preview.redd.it/ichinose-honami-ln-vs-anime-v0-s5xfqflkdp1b1.jpg?width=737&format=pjpg&auto=webp&s=da85c830b193d8a6a85144fb3b797973f3902167', url: 'https://developer.spotify.com/dashboard/df4cfadf6d7f404f8d3ae5920ed8b75e' })
+                                    .setDescription(`By: [${song_and_artist[1]}](${url.artistURL}) on [${url.albumName}](${url.albumURL})`)
+                                    .setFooter({ text: 'On Spotify', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Spotify_App_Logo.svg/1200px-Spotify_App_Logo.svg.png' })
+                                    .setThumbnail(url.imageURL);
+                            } catch (error) {
+                                console.error("Error in constructing the trackEmbed: "+error);
+                            }
                             
                             try { 
                                 if (trackEmbed) {
@@ -949,7 +989,7 @@ client.on("messageCreate", async message => {
                             } catch (error) {
                                 console.error("Error in sending the message: "+error);
                                 if (String(error).includes("expired")) {
-                                    requestRefresh(newRefreshToken, String(error))
+                                    requestRefresh(Tokens.getRefreshToken(), String(error))
                                         .then((refreshedAccessToken) => {
                                             newAccessToken = refreshedAccessToken;
                                             return true;
@@ -975,7 +1015,7 @@ client.on("messageCreate", async message => {
             })      
             .catch((error) => {     
                 if (String(error).includes('expired') && String(newRefreshToken !== null)) {
-                    requestRefresh(newRefreshToken, error);
+                    requestRefresh(Tokens.getRefreshToken(), error);
                     return true; //return true to simulate success in refreshing
                 }                                     
                 console.error('Error in setInterval: '+error);
@@ -984,23 +1024,28 @@ client.on("messageCreate", async message => {
     }, 7000);
 
     /*
-    * Request a refresh every 30 minutes, since the access token will expire every hour
-    * Ensures that we try to refresh at least twice so that we increase the chances of successful requests
+    * Request a refresh every 10 minutes, since the access token will expire every hour
+    * Ensures that we try to refresh at least 6x so that we increase the chances of successful requests
     */
+
+    /*
     setInterval(async () => {
         try {
-            const refreshedAccessToken = await requestRefresh(newRefreshToken, "the access token expired");
+            const currentRefreshToken = Tokens.getRefreshToken();
+            const refreshedAccessToken = await requestRefresh(currentRefreshToken, "expired");
 
             //Set the current access token to the refreshed access token, so it can be used in the other functions:
             newAccessToken = refreshedAccessToken;
-            console.log("Refreshed access token after 30 min interval: "+newAccessToken);
+            Tokens.setAccessToken(newAccessToken);
+            console.log("Refreshed access token after 10 min interval: "+newAccessToken);
             return true;
 
         } catch (error) {
-            console.error("Error in refreshing after 30 mins: "+error);
+            console.error("Error in refreshing after 10 mins: "+error);
             return null;
         }
-    }, 1800000);
+    }, 600000);
+    */
 });
 
 client.login(config.token);
