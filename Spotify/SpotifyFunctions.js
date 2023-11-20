@@ -189,6 +189,7 @@ export async function playArtist(ArtistName, AccessToken) {
       .then((response) => {
         try {
           if (response.ok) {
+            console.log("Search response is ok!");
             return response.json();
           }
         } catch (error) {
@@ -214,9 +215,9 @@ export async function playArtist(ArtistName, AccessToken) {
           reject(null);
         }
       })
-      //Use returned Album ID to get the request the artist's top tracks from the API:
+      //Use returned artist ID to get the request the artist's top tracks from the API:
       .then((returnedID) => {
-        console.log("Returned album ID: "+returnedID);
+        console.log("Returned artist ID: "+returnedID);
         const artistEndpoint = `https://api.spotify.com/v1/artists`;
 
         const headers = {
@@ -228,23 +229,27 @@ export async function playArtist(ArtistName, AccessToken) {
           headers: headers, 
         };
         
-        //Construct the finalized album URL endpoint
-        const artistURL = `${artistEndpoint}/${returnedID}/top-tracks`;
+        //Construct the finalized artist URL endpoint
+        const artistURL = `${artistEndpoint}/${returnedID}/top-tracks?country=US`;
 
         return fetch(artistURL, requestOptions)
           .then((response) => {
             try {
-              if (response.ok) {
-                console.log("Response is ok!");
-                return response.json();
+
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
               }
+              console.log("Response is ok!");
+              return response.json();
+
             } catch (error) {
               console.error("Error in getting the JSON queue data: "+error);
               reject(null);
             }
           })
           .catch((error) => {
-            console.error("Error in fetching the albumURL data: "+error);
+            console.error("Error in fetching the artistURL data: "+error);
+            reject(null);
           })
       })      
       //Use the response to return the ArrayList of songs in the album
@@ -253,19 +258,69 @@ export async function playArtist(ArtistName, AccessToken) {
         const songList = [];
 
         //Iterate through each track and store their info into an array, use for-of since data does not give a total number of top tracks
-        for (const track of tracks) {
-          const trackInfo = {
-            name: track.name, 
-            artists: track.artists[0].name, //First instance of artists
-            duration_ms: track.duration_ms,
-            uri: track.uri,
-          };
-          songList.push(trackInfo);
+        try {
+
+          tracks.forEach((trackInfo) => { 
+            const track = {
+              name: trackInfo.name, 
+              artists: trackInfo.artists[0].name, //First instance of artists
+              duration_ms: trackInfo.duration_ms,
+              uri: trackInfo.uri,
+            };
+            songList.push(track);
+          });
+
+        } catch (error) {
+          console.error("Error in creating the songList (playArtist function): "+error);
+          reject(null);
         }
-        resolve(songList);
+
+        return songList;
+      })
+      //If song list returned, then play the first song of the songList
+      .then((songList) => {
+        try {
+          let successful = false;
+          playSong(songList[0].name, songList[0].artists, AccessToken)
+            .then((success) => {
+              if (success === true) {
+                console.log("First song played successfully!");
+                successful = true;
+
+                //Then, if first track successfully played, add the rest to queue and resolve
+                if (successful) { 
+                  for (let i = 1; i < songList.length; i++) {
+                    addToQueue(songList[i].uri, AccessToken)
+                      .then((result) => {
+                        if (result === true) {
+                          console.log(`Song number ${i} added to queue successfully!`);
+                        } else {
+                          console.log("Add to queue unsuccessful");
+                          reject(null);
+                        }
+                      })
+                  }
+                  //Process successful if it made it to here :)
+                  successful = false;
+                  resolve(songList[0].artists);
+                }
+
+              } else if (success === false) {
+                console.log("No active devices found");
+                reject(false);
+              } else {
+                console.log("Couldn't play the first song");
+                reject(null);
+              }
+            })
+
+        } catch (error) {
+          console.error("Error in playing the artist's first track: "+error);
+          reject(null);
+        }
       })
       .catch((error) => {
-        console.error("Error in fetching album response: "+error);
+        console.error("Error in fetching artist response: "+error);
         reject(null);
       });
   });
@@ -390,7 +445,7 @@ export async function checkCurrentTrack(AccessToken) {
         const currentSong = await spotifyApi.getMyCurrentPlayingTrack()
         //If there is no current song playing, break
         if (!currentSong || !currentSong.body || !currentSong.body.item) {
-          console.error("No current song playing");
+          //console.error("No current song playing"); --> Error message
           return null;
         }
         const currentSongName = (await currentSong).body.item.name;

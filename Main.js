@@ -16,7 +16,7 @@
 */
 
 //Init discord.js, Table, fetch, SpotifyAPI
-import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder, MessageManager } from 'discord.js';
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -59,7 +59,7 @@ import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js'
 import { Task } from './Task.js';
 import { Token } from  './Token.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum, getTrackURL } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum, playArtist, getTrackURL } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -83,7 +83,6 @@ client.on('guildMemberAdd', (member) => {
     //Send the embed as a message:
     member.guild.channels.cache.find(ch => ch.name === 'general').send({ embeds: [welcomeEmbed] });
 });
-
 
 //MESSAGE FUNCTIONALITIES:
 client.on("messageCreate", async message => {
@@ -513,7 +512,7 @@ client.on("messageCreate", async message => {
     if (content === '!music') {
         await message.channel.send("Make you authorize Spotify first or else these functions won't run!! Authorize using the command: !authorize");
         sleep(3000);
-        await message.channel.send("Please enter a function: !play, !cancel, !album");
+        await message.channel.send("Please enter a function: !play, !album, !artist, !cancel");
         enableMusic = true;
         
         const musicListener = async (nestedMessage) => {
@@ -786,6 +785,66 @@ client.on("messageCreate", async message => {
                     }
                     //Register back the playAlbumListener
                     client.on('messageCreate', playAlbumListener);
+                } else if (nestedMessage === '!artist') {
+                    await message.channel.send("Sure!! Enter the name of the artist you want to play~~");
+                    sleep(1000);
+
+                    const artistListener = async (input) => {
+                        if (input.author.bot || input === '!cancel') { return; }
+
+                        await message.channel.send("Alrighty, give me a moment...")
+
+                        try {
+                            isPaused = true;
+                            //Clear queue in preparation to add album tracks
+                            await clearQueue(newAccessToken)
+                                .then(() => {
+                                    console.log("Queue cleared successfully (!album command)");
+                                })
+                                .catch((error) => {
+                                    console.error("Error in clearing the queue: "+error)
+                                });
+
+                            await playArtist(input, Tokens.getAccessToken())
+                                .then((artist) => {
+                                    if (artist) {
+                                        message.channel.send(`**${artist}** is now playing :D`);
+                                        client.off('messageCreate', artistListener);
+                                        client.off('messageCreate', musicListener);
+                                        isPaused = false;
+                                        return true;
+                                    } else if (!artist) {
+                                        message.channel.send("Couldn't find your device!");
+                                        client.off('messageCreate', artistListener);
+                                        client.off('messageCreate', musicListener);
+                                        isPaused = false;
+                                        return false;
+                                    } else {
+                                        message.channel.send("I wasn't able to get your chosen artist's tracks! :(");
+                                        client.off('messageCreate', artistListener);
+                                        client.off('messageCreate', musicListener);
+                                        isPaused = false;
+                                        return null;
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error("Error in calling the playArtist function: "+error);
+                                    client.off('messageCreate', artistListener);
+                                    client.off('messageCreate', musicListener);
+                                    isPaused = false;
+                                    return null;
+                                })
+                        } catch (error) {
+                            console.error("Error in using the artistListener functionality: "+error);
+                            client.off('messageCreate', artistListener);
+                            client.off('messageCreate', musicListener);
+                            isPaused = false;
+                            return null;
+                        }
+                    }
+                    //Register back the artistListener:
+                    client.on('messageCreate', artistListener);
+
                 } else {
                     console.log("Functionality doesn't exist");
                 }                          
@@ -811,6 +870,8 @@ client.on("messageCreate", async message => {
                     message.channel.send("Couldn't find your device!");
                 } else if (String(error).includes("No token provided")) {
                     message.channel.send("You haven't authorized with Spotify yet!!")
+                } else if (String(error).includes("Restriction violated UNKNOWN")) {
+                    message.channel.send("Your song is already paused!");
                 } else {
                     message.channel.send("Couldn't resume your song!");
                 }
@@ -827,6 +888,8 @@ client.on("messageCreate", async message => {
                     message.channel.send("Couldn't find your device!");
                 } else if (String(error).includes("No token provided")) {
                     message.channel.send("You haven't authorized with Spotify yet!!")
+                } else if (String(error).includes("Restriction violated UNKNOWN")) {
+                    message.channel.send("Your song is already playing!");
                 } else {
                     message.channel.send("Couldn't resume your song!");
                 }
@@ -843,7 +906,7 @@ client.on("messageCreate", async message => {
                 } else if (String(error).includes("No token provided")) {
                     message.channel.send("You haven't authorized with Spotify yet!!")
                 } else {
-                    message.channel.send("Couldn't resume your song!");
+                    message.channel.send("Couldn't skip to your next song!");
                 }
             });
     } else if (content === '!skip to previous') {
@@ -858,7 +921,7 @@ client.on("messageCreate", async message => {
                 } else if (String(error).includes("No token provided")) {
                     message.channel.send("You haven't authorized with Spotify yet!!");
                 } else {
-                    message.channel.send("Couldn't resume your song!");
+                    message.channel.send("Couldn't skip to your previous song!");
                 }
             });
     } else if (content === '!volume') {
@@ -987,7 +1050,7 @@ client.on("messageCreate", async message => {
                                     return false;
                                 }
                             } catch (error) {
-                                console.error("Error in sending the message: "+error);
+                                console.error("Error in sending the embed song message: "+error);
                                 if (String(error).includes("expired")) {
                                     requestRefresh(Tokens.getRefreshToken(), String(error))
                                         .then((refreshedAccessToken) => {
