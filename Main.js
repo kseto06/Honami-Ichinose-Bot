@@ -16,7 +16,7 @@
 */
 
 //Init discord.js, Table, fetch, SpotifyAPI
-import { Client, GatewayIntentBits, EmbedBuilder, MessageManager } from 'discord.js';
+import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js';
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -59,7 +59,7 @@ import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js'
 import { Task } from './Task.js';
 import { Token } from  './Token.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, addToQueue, getAlbum, playArtist, getTrackURL } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, getQueue, addToQueue, getAlbum, playArtist, getTrackURL } from './Spotify/SpotifyFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -813,7 +813,7 @@ client.on("messageCreate", async message => {
                                         client.off('messageCreate', musicListener);
                                         isPaused = false;
                                         return true;
-                                    } else if (!artist) {
+                                    } else if (artist === false) {
                                         message.channel.send("Couldn't find your device!");
                                         client.off('messageCreate', artistListener);
                                         client.off('messageCreate', musicListener);
@@ -990,6 +990,43 @@ client.on("messageCreate", async message => {
                 console.error("Error in clearing the queue (!clear queue cmd): "+error);
                 return;
             });
+    } else if (content === '!view queue') {
+        await message.channel.send("Alright, give me a moment...");
+        await getQueue(Tokens.getAccessToken())
+            .then((queueList) => {
+                if (queueList) {
+                    const queue = new Table ({
+                        titles: ['**Song**', '**Artist**', '**Album**'],
+                        titleIndexes: [0, 61, 100],
+                        columnIndexes: [0, 30, 50],
+                        start: '`',
+                        end: '`',
+                        padEnd: 3
+                    });
+
+                    //Add the values to the embedTable
+                    for (let i = 0; i < queueList.length; i++) {
+                        try {
+                            queue.addRow([queueList[i].name, queueList[i].artist, queueList[i].album]);
+                        } catch (error) {
+                            console.error(`Error in adding queueList #${i} in the list`);
+                        }
+                    }
+
+                    //Once all values have been added to the table, use embedBuilder to send the table
+                    const embed = new EmbedBuilder().setFields(table.toField());                            
+                    message.channel.send({ embeds: [embed] });
+
+                } else {
+                    message.channel.send("I couldn't get your queue of songs!! :(");
+                    return;
+                }
+            })
+            .catch((error) => {
+                message.channel.send("I couldn't get your queue of songs!");
+                console.error("Error in retreiving the queue: "+error);
+                return null;
+            })
     }
 
     //Build Clash Royale Deck

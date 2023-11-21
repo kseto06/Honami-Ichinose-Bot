@@ -307,10 +307,10 @@ export async function playArtist(ArtistName, AccessToken) {
 
               } else if (success === false) {
                 console.log("No active devices found");
-                reject(false);
+                resolve(false);
               } else {
                 console.log("Couldn't play the first song");
-                reject(null);
+                resolve(null);
               }
             })
 
@@ -592,7 +592,7 @@ export async function addToQueue(uri, AccessToken) {
   });
 }
 
-async function getQueue(AccessToken) {
+export async function getQueue(AccessToken) {
   return new Promise((resolve, reject) => {
     
     //Define the API Endpoint => in this case, the queue
