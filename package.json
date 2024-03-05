@@ -6,7 +6,7 @@
   "main": "Main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "concurrently \"ngrok http 8080\" \"node Main.js\""
+    "start": "node Main.js && npm run ngrok http 8080"
   },
   "keywords": [
     "Kaden",
@@ -25,6 +25,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "mathjs": "^11.11.1",
     "node-fetch": "^3.3.2",
+    "openai": "^4.28.4",
     "spotify-web-api-node": "^5.0.2",
     "ytdl-core": "^4.11.5"
   },

@@ -60,6 +60,7 @@ import { Task } from './Task.js';
 import { Token } from  './Token.js';
 import { getTomorrowDate } from './Date.js';
 import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, getQueue, addToQueue, getAlbum, playArtist, getTrackURL } from './Spotify/SpotifyFunctions.js';
+import { GPTMessage } from './ChatGPT/GPTFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
 var newRefreshToken = null;
@@ -979,11 +980,26 @@ client.on("messageCreate", async message => {
             return;
         }
     } else if (content === '!clear queue') {
-        await message.channel.send("Alright, give me a second...");
+        await message.channel.send("Alright, give me a moment...");
+        isPaused = true;
         await clearQueue(newAccessToken)
             .then(() => {
                 message.channel.send("Queue cleared successfully!");
-                return;
+                isPaused = false;
+                return true;
+            })
+            .then((success) => {
+                if (success) { 
+                    //Stop the original song from repeating
+                    spotifyApi.pause()
+                        .then(() => {
+                            console.log("Original song paused successfully");
+                        })
+                        .catch((error) => {
+                            console.log("Error in pausing the song after clearing queue: "+error);
+                        })
+                    return; 
+                }
             })
             .catch((error) => {
                 message.channel.send("I was unable to clear your queue :(");
@@ -1027,6 +1043,39 @@ client.on("messageCreate", async message => {
                 console.error("Error in retreiving the queue: "+error);
                 return null;
             })
+    }
+
+    //Chat GPT API Message:
+    if (content === '!gpt') {
+        await message.reply("What would you like to ask?");
+
+        try {
+
+            const gptListener = async (input) => {
+                if (input.author.bot || input === '!cancel') { return; }
+
+                await message.channel.send("Give me a sec to think about it...");
+                sleep(1000);
+
+                await GPTMessage(input)
+                    .then((result) => {
+                        message.channel.send("Here's my answer: ")
+                        message.channel.send(result);
+                        client.off('messageCreate', gptListener);
+                    })
+                    .catch((error) => {
+                        message.channel.send("I couldn't access the GPT!! :(");
+                        console.error("Error in getting the GPT output: "+error);
+                        client.off('messageCreate', gptListener);
+                    });
+            }
+
+        } catch (error) {
+            console.error("API Error caught: "+error);
+        }
+
+        //Register back the artistListener:
+        client.on('messageCreate', gptListener);
     }
 
     //Build Clash Royale Deck
