@@ -1030,7 +1030,7 @@ client.on("messageCreate", async message => {
                     }
 
                     //Once all values have been added to the table, use embedBuilder to send the table
-                    const embed = new EmbedBuilder().setFields(table.toField());                            
+                    const embed = new EmbedBuilder().setFields(queue.toField());                            
                     message.channel.send({ embeds: [embed] });
 
                 } else {
