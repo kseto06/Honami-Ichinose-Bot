@@ -1013,17 +1013,21 @@ client.on("messageCreate", async message => {
                 if (queueList) {
                     const queue = new Table ({
                         titles: ['**Song**', '**Artist**', '**Album**'],
-                        titleIndexes: [0, 61, 100],
-                        columnIndexes: [0, 30, 50],
+                        titleIndexes: [0, 70, 98],
+                        columnIndexes: [0, 34, 48],
                         start: '`',
                         end: '`',
                         padEnd: 3
                     });
 
-                    //Add the values to the embedTable
-                    for (let i = 0; i < queueList.length; i++) {
+                    //Add the values to the embedTable。 Limit number of songs to 10 (taking from most recent) to avoid possible errors:
+                    for (let i = 0; i < 10; i++) {
                         try {
-                            queue.addRow([queueList[i].name, queueList[i].artist, queueList[i].album]);
+                            queue.addRow([String(queueList[i].name), String(queueList[i].artist).trim(), String(queueList[i].album).trim()]);
+                            //Break when no more existing songs in the queue list:
+                            if (!queueList[i]) {
+                                break;
+                            }
                         } catch (error) {
                             console.error(`Error in adding queueList #${i} in the list`);
                         }
