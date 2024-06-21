@@ -28,6 +28,8 @@
  <ins>ChatGPT API</ins>
  - GPT Key to authorize -- reads incoming messages from Discord and sends back a response from GPT API
 
+
+
 ### Other Features:
 <ins>Calendar</ins>
 - Honami Ichinose Bot is able to add, resolve, and view the calendar of list of tasks for the user to complete
