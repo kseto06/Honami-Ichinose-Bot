@@ -1,1 +1,2 @@
-<center>Honami Ichinose Bot</center>
+#<p style="text-align: center;">Honami Ichinose Bot</p>
+
