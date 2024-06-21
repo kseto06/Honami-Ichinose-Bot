@@ -6,11 +6,12 @@
 
 <div align="center">
   Honami Ichinose, the iconic girl from Classroom of the Elite, has joined Discord to be the ultimate study buddy! 
-  From calculating math problems to organizing tasks and even helping with playing music, day-to-day studies will always be motivated.
+  From calculating math problems to organizing tasks and even helping with playing music, 
+  day-to-day studies will always be motivated.
 </div>
 
-### How it Works
-##### Backend APIs: 
+## How it Works
+### Backend APIs: 
 <ins>Discord API</ins>
 - Discord API and Developer to allow Discord Bot functionalities such as reading and responding to messages
 - Welcome feature that is called whenever a new person joins the server
@@ -27,7 +28,7 @@
  <ins>ChatGPT API</ins>
  - GPT Key to authorize -- reads incoming messages from Discord and sends back a response from GPT API
 
-##### Other Features:
+### Other Features:
 <ins>Calendar</ins>
 - Honami Ichinose Bot is able to add, resolve, and view the calendar of list of tasks for the user to complete
 
