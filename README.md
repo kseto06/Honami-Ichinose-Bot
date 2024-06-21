@@ -20,7 +20,7 @@
 - Authorization PKCE Code Flow to grant user authorization for Honami Ichinose Spotify Developer
 - Honami Ichinose Bot can now have access to a plethora of Spotify functionalities, using fetch/JSON API calls, such as:
   - Choosing songs, albums, or artists to play through discord message prompt.
-    - Choosing songs automatically adds additional songs to the queue, which Spotify is unable to do (will keep putting your song on repeat)
+    - Choosing songs automatically adds additional songs to the queue, which Spotify is unable to do (it will keep putting your song on repeat)
   - Pausing and skip functionalities
   - Volume changing functionality
   - Song identification functionality that holds song data whenever a new song is detected
