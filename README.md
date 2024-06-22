@@ -27,6 +27,7 @@
 
  <ins>ChatGPT API</ins>
  - GPT Key to authorize -- reads incoming messages from Discord and sends back a response from GPT API
+ - NOTE: For this functionality to work, money must be spent on GPT API.
 
 <br>
 
@@ -42,4 +43,4 @@
 
 <br>
 
-Note: For this project to run, it requires config files that contain the keys to authorize the different APIs, which is not shared here in this publicly in this repository.
+Note: For this project to run, it requires config files that contain the keys to authorize the different APIs, which is not shared here publicly in this repository.
