@@ -1089,6 +1089,10 @@ client.on("messageCreate", async message => {
 
     //Periodically check the current track (SpotifyFunction)
     setInterval(async () => {
+        periodicCheck();
+    }, 7000);
+
+    async function periodicCheck() {
         if (isPaused || newAccessToken === null) { return; }
 
         await spotifyApi.setAccessToken(newAccessToken);
@@ -1174,7 +1178,7 @@ client.on("messageCreate", async message => {
                 console.error('Error in setInterval: '+error);
                 return null; //return null to simulate failure      
             });
-    }, 7000);
+    }
 
     /*
     * Request a refresh every 10 minutes, since the access token will expire every hour
