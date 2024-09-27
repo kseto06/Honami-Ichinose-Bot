@@ -290,15 +290,19 @@ export async function playArtist(ArtistName, AccessToken) {
                 //Then, if first track successfully played, add the rest to queue and resolve
                 if (successful) { 
                   for (let i = 1; i < songList.length; i++) {
-                    addToQueue(songList[i].uri, AccessToken)
-                      .then((result) => {
-                        if (result === true) {
-                          console.log(`Song number ${i} added to queue successfully!`);
-                        } else {
-                          console.log("Add to queue unsuccessful");
-                          reject(null);
-                        }
-                      })
+                    try {
+                      addToQueue(songList[i].uri, AccessToken)
+                        .then((result) => {
+                          if (result === true) {
+                            console.log(`Song number ${i} added to queue successfully!`);
+                          } else {
+                            console.log("Add to queue unsuccessful");
+                            reject(false);
+                          }
+                        })
+                    } catch (error) {
+                      console.log("Error in adding to queue (playArtist): ", error)
+                    }
                   }
                   //Process successful if it made it to here :)
                   successful = false;
@@ -587,7 +591,8 @@ export async function addToQueue(uri, AccessToken) {
     })
     .catch((error) => {
       console.error("Error in using fetch (addToQueue): "+error);
-      reject(null);
+      // reject(null);
+      resolve(false);
     })
   });
 }
