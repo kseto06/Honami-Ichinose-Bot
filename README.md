@@ -10,8 +10,15 @@
   day-to-day studies will always be motivated.
 </div>
 
-## Spotify Demo
-![Demo](demo/honami_spotify_demo.gif)
+### Spotify Demo
+<p align="center">
+  <img src="./honami_spotify_demo.gif">
+</p>
+
+### Task Management Demo
+<p align="center">
+  <img src="./honami_task_demo.gif">
+</p>
 
 ## How it Works
 ### Backend APIs: 
