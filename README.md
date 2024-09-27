@@ -10,6 +10,9 @@
   day-to-day studies will always be motivated.
 </div>
 
+## Spotify Demo
+![Demo](demo/honami_spotify_demo.gif)
+
 ## How it Works
 ### Backend APIs: 
 <ins>Discord API</ins>
