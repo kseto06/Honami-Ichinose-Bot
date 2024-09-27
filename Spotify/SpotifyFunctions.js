@@ -400,8 +400,8 @@ export async function getPlaylist(PlaylistName, AccessToken) {
             for (let i = 0; i < songs.length; i++) {
               playlistArray.push(songs.body.items.tracks.track.name);
               const QueueURI = data.body.tracks.items[i].uri;
-                  //console.log(QueueURI);
-                  spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
+                //console.log(QueueURI);
+                spotifyApi.addToQueue(QueueURI, { device_id: activeDeviceID });
             }
           })
       })
@@ -841,6 +841,52 @@ export async function getTrackURL(trackName, artistName, accessToken) {
           console.error("Error in fetching the overall track response: "+error);
         });
   });
+}
+
+export async function setSongPosition(position_ms, AccessToken) {
+  return new Promise((resolve, reject) => { 
+      //Check for valid integer value for position_ms
+      if (!Number.isInteger(position_ms)) {
+        reject(false);
+      }
+
+      // Define the API endpoint
+      const apiUrl = `https://api.spotify.com/v1/me/player/seek?position_ms=${position_ms}`;
+
+      // Define the headers, including the Authorization header with your access token
+      const headers = {
+        'Authorization': `Bearer ${AccessToken}`,
+        'Content-Type': 'application/json' // Spotify API requires 'Content-Type' header
+      };
+  
+      // Create the request object
+      const requestOptions = {
+        method: 'PUT',
+        headers: headers,
+        body: null // No request body needed for this request
+      };
+
+      fetch(apiUrl, requestOptions)
+        .then((response) => {
+          try {
+            if (response.status === 204) {
+              // 204 status indicates success with no content
+              console.log('Song position changed successfully');
+              resolve(true);
+
+            } else if (response.ok) {
+              return response.json();
+
+            } else {
+              throw new Error('Error changing pos: '+response.statusText);
+            }
+
+          } catch (error) {
+            console.error("Error in getting the JSON id data: "+error);
+            reject(null);
+          }
+        });
+    });
 }
 
 //TEST: --IT WORKS 

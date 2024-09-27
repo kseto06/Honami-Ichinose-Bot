@@ -59,7 +59,7 @@ import { goodbyeWords, helloWords, sadWords, encouragements } from './Arrays.js'
 import { Task } from './Task.js';
 import { Token } from  './Token.js';
 import { getTomorrowDate } from './Date.js';
-import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, getQueue, addToQueue, getAlbum, playArtist, getTrackURL } from './Spotify/SpotifyFunctions.js';
+import { authorizeSpotify, playSong, returnNextTracks, checkCurrentTrack, requestRefresh, setVolume, clearQueue, getQueue, addToQueue, getAlbum, playArtist, getTrackURL, setSongPosition } from './Spotify/SpotifyFunctions.js';
 import { GPTMessage } from './ChatGPT/GPTFunctions.js';
 const currentDate = new Date();
 var newAccessToken = null;
@@ -979,6 +979,26 @@ client.on("messageCreate", async message => {
         } else {
             return;
         }
+
+    } else if (content === "!replay") {
+        await message.channel.send("Alright, give me a moment...");
+        await setSongPosition(0, Tokens.getAccessToken())
+            .then((success) => {
+                if (success) {
+                    message.channel.send("Alright, replaying your current song...");
+                } 
+            })
+            .catch((error) => {
+                console.error("Error in replaying song: "+error);
+                if (String(error).includes("NO_ACTIVE_DEVICE")) {
+                    message.channel.send("Couldn't find your device!");
+                } else if (String(error).includes("No token provided")) {
+                    message.channel.send("You haven't authorized with Spotify yet!!");
+                } else {
+                    message.channel.send("Couldn't replay your current song!");
+                }
+            });
+    
     } else if (content === '!clear queue') {
         await message.channel.send("Alright, give me a moment...");
         isPaused = true;
@@ -1089,10 +1109,6 @@ client.on("messageCreate", async message => {
 
     //Periodically check the current track (SpotifyFunction)
     setInterval(async () => {
-        periodicCheck();
-    }, 7000);
-
-    async function periodicCheck() {
         if (isPaused || newAccessToken === null) { return; }
 
         await spotifyApi.setAccessToken(newAccessToken);
@@ -1178,7 +1194,7 @@ client.on("messageCreate", async message => {
                 console.error('Error in setInterval: '+error);
                 return null; //return null to simulate failure      
             });
-    }
+    }, 7000);
 
     /*
     * Request a refresh every 10 minutes, since the access token will expire every hour
