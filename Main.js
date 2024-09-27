@@ -107,12 +107,12 @@ client.on("messageCreate", async message => {
         }
     }
 
-    //"Goodbye" function
+    // "Goodbye" function
     if (goodbyeWords.some((word) => content.includes(word))) {
         await message.reply("bye bye!! see u later <3")
     }
 
-    //"Encouragements"
+    // "Encouragements"
     if (sadWords.some((word) => content.includes(word))) {
         randomizeArray(encouragements)
             .then((result) => {
@@ -124,8 +124,22 @@ client.on("messageCreate", async message => {
             });
     }
 
-    if (content.includes('mommy') || content.includes('mommies')) {
-        await message.reply("hmmm... should I be your mommy :smirk:");
+    //Show commands
+    if (content === "!cmds") {
+        await message.reply("Commands: ")
+        await message.channel.send("!calculator (Scientific Calculator)")
+        await message.channel.send("!calendar (Task Manage)")
+        await message.channel.send("!authorize (Authorize Spotify)")
+        await message.channel.send("!refresh (Refresh Spotify every hour)")
+        await message.channel.send("!music")
+        await message.channel.send(" - !replay")
+        await message.channel.send(" - !pause")
+        await message.channel.send(" - !resume")
+        await message.channel.send(" - !skip to next")
+        await message.channel.send(" - !skip to previous")
+        await message.channel.send(" - !volume => __%")
+        await message.channel.send(" - !view queue")
+        await message.channel.send(" - !clear queue")
     }
 
     //Calculator function
